@@ -10,8 +10,37 @@ const occupied = {};
 const messageEl = document.getElementById('message');
 const cutHeadBtn = document.getElementById('cutHead');
 const cutTailBtn = document.getElementById('cutTail');
+let availableMoves = [];
+
+function updateAvailableMoves(){
+  availableMoves = [];
+  const mySnake = snakes[current];
+  if(mySnake.length === 0){
+    const stars = [3,9,15];
+    stars.forEach(x=>{
+      stars.forEach(y=>{
+        if(!occupied[posKey(x,y)]) availableMoves.push({x,y});
+      });
+    });
+  }else{
+    const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+    const ends = [mySnake[0], mySnake[mySnake.length-1]];
+    ends.forEach(end=>{
+      dirs.forEach(d=>{
+        const nx=end.x+d.x;
+        const ny=end.y+d.y;
+        const key=posKey(nx,ny);
+        if(nx>=0 && nx<boardSize && ny>=0 && ny<boardSize && !occupied[key]){
+          if(!availableMoves.some(p=>p.x===nx && p.y===ny))
+            availableMoves.push({x:nx,y:ny});
+        }
+      });
+    });
+  }
+}
 
 function drawBoard(){
+  updateAvailableMoves();
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.strokeStyle = '#333';
   for(let i=0;i<boardSize;i++){
@@ -31,6 +60,12 @@ function drawBoard(){
   });
   Object.entries(snakes).forEach(([color,list])=>{
     list.forEach(pt=>drawStone(pt.x,pt.y,color));
+  });
+  ctx.fillStyle='rgba(0,255,0,0.4)';
+  availableMoves.forEach(p=>{
+    ctx.beginPath();
+    ctx.arc(padding+p.x*cellSize,padding+p.y*cellSize,6,0,Math.PI*2);
+    ctx.fill();
   });
 }
 
@@ -66,15 +101,15 @@ canvas.addEventListener('click', e=>{
         mySnake.push({x,y});
       }
       occupied[key] = current;
-      drawBoard();
       switchPlayer();
+      drawBoard();
       return;
     }else{
       return;
     }
   }
-  drawBoard();
   switchPlayer();
+  drawBoard();
 });
 
 function isStar(x,y){
