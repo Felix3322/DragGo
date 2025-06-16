@@ -13,6 +13,18 @@ const cutTailBtn = document.getElementById('cutTail');
 const moveCount = {black:0, white:0};
 const diagonalChance = {black:false, white:false};
 let availableMoves = [];
+let headCutUsed = false;
+
+const introEl = document.getElementById('intro');
+const introCanvas = document.getElementById('introCanvas');
+const replayIntroBtn = document.getElementById('replayIntro');
+const continueIntroBtn = document.getElementById('continueIntro');
+const loginOverlay = document.getElementById('login');
+const usernameInput = document.getElementById('username');
+const passwordInput = document.getElementById('password');
+const loginBtn = document.getElementById('loginBtn');
+const loginMsg = document.getElementById('loginMsg');
+const scoreBoard = document.getElementById('scoreBoard');
 
 function updateAvailableMoves(){
   availableMoves = [];
@@ -29,7 +41,9 @@ function updateAvailableMoves(){
     if(diagonalChance[current]){
       dirs.push({x:1,y:1},{x:1,y:-1},{x:-1,y:1},{x:-1,y:-1});
     }
-    const ends = [mySnake[0], mySnake[mySnake.length-1]];
+    const ends = [];
+    if(!blockedForward(mySnake,0)) ends.push(mySnake[0]);
+    if(!blockedForward(mySnake,mySnake.length-1)) ends.push(mySnake[mySnake.length-1]);
     ends.forEach(end=>{
       dirs.forEach(d=>{
         const nx=end.x+d.x;
@@ -182,7 +196,7 @@ function blockedForward(snake,index){
 
 function updateCutButtons(){
   const mySnake=snakes[current];
-  if(mySnake.length>=2 && blockedForward(mySnake,0)){
+  if(!headCutUsed && mySnake.length>=2 && blockedForward(mySnake,0)){
     cutHeadBtn.classList.remove('hidden');
   }else{
     cutHeadBtn.classList.add('hidden');
@@ -200,9 +214,11 @@ cutTailBtn.onclick=()=>{ cutEnd(false); };
 function cutEnd(head){
   const mySnake=snakes[current];
   if(mySnake.length===0) return;
+  if(head && headCutUsed) return;
   let removed;
   if(head){
     removed=mySnake.shift();
+    headCutUsed=true;
   }else{
     removed=mySnake.pop();
   }
@@ -301,4 +317,58 @@ function showDemo(){
   setTimeout(step,500);
 }
 
-document.addEventListener('DOMContentLoaded', showDemo);
+function showIntroAnimation(){
+  const ictx = introCanvas.getContext('2d');
+  let alpha=0;
+  function frame(){
+    ictx.clearRect(0,0,introCanvas.width,introCanvas.height);
+    ictx.fillStyle = '#f5d6a0';
+    ictx.fillRect(0,0,introCanvas.width,introCanvas.height);
+    ictx.fillStyle = `rgba(0,0,0,${alpha})`;
+    ictx.font = '72px sans-serif';
+    ictx.fillText('Snake Blocking Game', 50, introCanvas.height/2);
+    if(alpha < 1){
+      alpha += 0.02;
+      requestAnimationFrame(frame);
+    }
+  }
+  frame();
+}
+
+replayIntroBtn.onclick = showIntroAnimation;
+continueIntroBtn.onclick = () => {
+  introEl.classList.add('hidden');
+  document.getElementById('instructions').classList.remove('hidden');
+  showDemo();
+};
+
+document.getElementById('openLogin').onclick = () => {
+  loginOverlay.classList.remove('hidden');
+};
+
+loginBtn.onclick = () => {
+  const u = usernameInput.value;
+  const p = passwordInput.value;
+  fetch('https://example.com/api/login', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:u,password:p})
+  }).then(r=>r.json()).then(res=>{
+    if(res.success){
+      loginMsg.textContent = 'Logged in';
+      loginOverlay.classList.add('hidden');
+      fetch('https://example.com/api/elo').then(r=>r.json()).then(list=>{
+        scoreBoard.innerHTML = '<h3>ELO Rankings</h3>'+
+          '<ol>'+list.map(i=>`<li>${i.name}: ${i.elo}</li>`).join('')+'</ol>';
+      });
+    }else{
+      loginMsg.textContent = 'Login failed';
+    }
+  }).catch(()=>{
+    loginMsg.textContent = 'Network error';
+  });
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  showIntroAnimation();
+});
