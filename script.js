@@ -10,6 +10,8 @@ const occupied = {};
 const messageEl = document.getElementById('message');
 const cutHeadBtn = document.getElementById('cutHead');
 const cutTailBtn = document.getElementById('cutTail');
+const moveCount = {black:0, white:0};
+const diagonalChance = {black:false, white:false};
 let availableMoves = [];
 
 function updateAvailableMoves(){
@@ -24,6 +26,9 @@ function updateAvailableMoves(){
     });
   }else{
     const dirs = [{x:1,y:0},{x:-1,y:0},{x:0,y:1},{x:0,y:-1}];
+    if(diagonalChance[current]){
+      dirs.push({x:1,y:1},{x:1,y:-1},{x:-1,y:1},{x:-1,y:-1});
+    }
     const ends = [mySnake[0], mySnake[mySnake.length-1]];
     ends.forEach(end=>{
       dirs.forEach(d=>{
@@ -88,26 +93,30 @@ canvas.addEventListener('click', e=>{
   const key = posKey(x,y);
   if(occupied[key]) return;
   const mySnake = snakes[current];
+  let diagUsed=false;
   if(mySnake.length===0){
     if(!isStar(x,y)) return;
     place(x,y);
   }else{
     const head = mySnake[0];
     const tail = mySnake[mySnake.length-1];
-    if(adjacent(x,y,head) || adjacent(x,y,tail)){
-      if(adjacent(x,y,head)){
-        mySnake.unshift({x,y});
-      }else{
-        mySnake.push({x,y});
-      }
-      occupied[key] = current;
-      switchPlayer();
-      drawBoard();
-      return;
+    const valid = adjacent(x,y,head) || adjacent(x,y,tail) ||
+                  (diagonalChance[current] && (diagonal(x,y,head) || diagonal(x,y,tail)));
+    if(!valid) return;
+    if(diagonalChance[current] && diagonal(x,y,head)){
+      mySnake.unshift({x,y});
+      diagUsed=true;
+    }else if(diagonalChance[current] && diagonal(x,y,tail)){
+      mySnake.push({x,y});
+      diagUsed=true;
+    }else if(adjacent(x,y,head)){
+      mySnake.unshift({x,y});
     }else{
-      return;
+      mySnake.push({x,y});
     }
+    occupied[key]=current;
   }
+  finishMove(diagUsed);
   switchPlayer();
   drawBoard();
 });
@@ -121,9 +130,30 @@ function adjacent(x,y,p){
   return Math.abs(x-p.x)+Math.abs(y-p.y)===1;
 }
 
+function diagonal(x,y,p){
+  return Math.abs(x-p.x)===1 && Math.abs(y-p.y)===1;
+}
+
 function place(x,y){
   snakes[current].push({x,y});
   occupied[posKey(x,y)] = current;
+}
+
+function finishMove(diagonalUsed){
+  if(diagonalChance[current]){
+    if(diagonalUsed){
+      moveCount[current]=0;
+    }else{
+      moveCount[current]=1;
+    }
+    diagonalChance[current]=false;
+  }else{
+    moveCount[current]++;
+    if(moveCount[current]>=5){
+      diagonalChance[current]=true;
+      moveCount[current]=0;
+    }
+  }
 }
 
 function forwardDir(snake,index){
@@ -184,7 +214,8 @@ function cutEnd(head){
 function switchPlayer(){
   if(checkWin()) return;
   current = current==='black'?'white':'black';
-  messageEl.textContent = (current==='black'?'黑':'白')+"方行动";
+  messageEl.textContent = (current==='black'?'黑':'白')+"方行动"+
+    (diagonalChance[current]?"（可斜走）":"");
   updateCutButtons();
 }
 
@@ -211,7 +242,7 @@ document.getElementById('restart').onclick = ()=>location.reload();
 document.getElementById('startGame').onclick = ()=>{
   document.getElementById('instructions').classList.add('hidden');
   drawBoard();
-  messageEl.textContent = '黑方行动';
+  messageEl.textContent = '黑方行动' + (diagonalChance.black ? '（可斜走）' : '');
   updateCutButtons();
 };
 
