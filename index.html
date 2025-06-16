@@ -1,1 +1,32 @@
-
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snake Blocking Game / 蛇堵棋</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="board" width="600" height="600"></canvas>
+<div id="message"></div>
+<div id="controls">
+  <button id="restart">重新开始</button>
+  <button id="cutHead" class="hidden">截断头部</button>
+  <button id="cutTail" class="hidden">截断尾部</button>
+</div>
+<div id="instructions" class="overlay">
+  <h1>Snake Blocking Game / 蛇堵棋</h1>
+  <p>Goal: block both ends of your opponent's snake.<br>目标：堵死对手蛇的两端。</p>
+  <ol>
+    <li>Each player starts from any <strong>star point</strong>. 玩家从任意星位开始。</li>
+    <li>On your turn, place one stone next to either head or tail of your own snake. 每回合只能在自己蛇首尾相邻处下子。</li>
+    <li>An end is <em>blocked</em> when the grid point directly beyond it, along the direction from the previous stone, is off the board or occupied. 若蛇首或蛇尾按照与前一子相同的方向继续前进遭遇棋盘边界或棋子，即判定为堵住。</li>
+    <li>If one end is blocked, you may cut off that blocked part and remove it from the board. 若一端被堵，可截断并清除堵死部分。</li>
+    <li>When both ends are blocked, the opponent wins. 若两端被堵，对手获胜。</li>
+  </ol>
+  <canvas id="demoBoard" width="200" height="200"></canvas>
+  <button id="startGame">Start / 开始</button>
+</div>
+<script src="script.js" defer></script>
+</body>
+</html>
