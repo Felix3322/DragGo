@@ -27,7 +27,14 @@
   <h1 id="title">DragGo</h1>
   <div id="rules"></div>
   <p id="hint"></p>
-  <canvas id="demoBoard" width="200" height="200"></canvas>
+  <div class="demoFrame">
+    <canvas id="demo1" width="200" height="200" class="demoBoard"></canvas>
+    <p id="caption1" class="demoCaption"></p>
+  </div>
+  <div class="demoFrame">
+    <canvas id="demo2" width="200" height="200" class="demoBoard"></canvas>
+    <p id="caption2" class="demoCaption"></p>
+  </div>
   <button id="replayDemo">Replay Demo</button>
   <button id="startGame">Start</button>
 </div>
@@ -42,7 +49,9 @@
   <button id="closeOnline">Close</button>
 </div>
 <button id="onlineBtn">Online</button>
+<p id="copyright">© 2025 Felix Liu</p>
 <script src="script.js" defer></script>
 <!-- Copyright 2025 Felix Liu -->
 </body>
 </html>
+

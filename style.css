@@ -7,7 +7,9 @@ button { margin: 0 5px; }
 .overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); color:#fff; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:left; padding:20px; }
 #langSwitch { position:absolute; top:5px; right:5px; }
 .hidden { display:none; }
-#demoBoard { background:#f5d6a0; border:1px solid #333; margin:20px auto; }
+.demoFrame { margin:20px 0; }
+.demoBoard { background:#f5d6a0; border:1px solid #333; display:block; margin:0 auto; }
+.demoCaption { margin-top:10px; text-align:center; font-style:italic; }
 #online input { margin:5px; }
 .stats { position:absolute; top:50px; width:150px; }
 #statsBlack { left:5px; text-align:right; }

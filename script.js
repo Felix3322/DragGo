@@ -39,7 +39,25 @@ const texts = {
     moves: 'Moves',
     diagAvail: 'Diagonal',
     cutAvail: 'Cut',
-    replay: 'Replay Demo'
+    replay: 'Replay Demo',
+    demoCaptions: [
+      [
+        'Black starts at a star point.',
+        'White blocks on the right.',
+        'Black extends left.',
+        'White blocks again.',
+        'Blocked segment removed.',
+        'Black continues upward.'
+      ],
+      [
+        'Black builds forward.',
+        'Black advances again.',
+        'Black advances again.',
+        'White blocks the head.',
+        'Head is cut off.',
+        'Black continues left.'
+      ]
+    ]
   },
   zh: {
     title: 'DragGo',
@@ -74,7 +92,25 @@ const texts = {
     moves: '计数',
     diagAvail: '斜走',
     cutAvail: '截断',
-    replay: '重播教学'
+    replay: '重播教学',
+    demoCaptions: [
+      [
+        '黑方从星位开始。',
+        '白方在右侧堵截。',
+        '黑方向左延伸。',
+        '白方再次堵截。',
+        '被堵部分被移除。',
+        '黑方向上继续。'
+      ],
+      [
+        '黑方在直线上前进。',
+        '黑方继续前进。',
+        '黑方继续前进。',
+        '白方堵住前方。',
+        '黑方截断蛇头。',
+        '黑方向左继续。'
+      ]
+    ]
   }
 };
 
@@ -99,6 +135,8 @@ function applyLang(){
   document.getElementById('onlineBtn').textContent = t('onlineBtn');
   document.getElementById('username').placeholder = t('username');
   document.getElementById('password').placeholder = t('password');
+  demoCaptionEls[0].textContent = texts[lang].demoCaptions[0][0];
+  demoCaptionEls[1].textContent = texts[lang].demoCaptions[1][0];
   if(messageEl.textContent)
     switchPlayer(true); // refresh current turn text
   updateStats();
@@ -108,6 +146,7 @@ langSelect.onchange = ()=>{
   lang = langSelect.value;
   localStorage.setItem('lang', lang);
   applyLang();
+  cycleDemos();
 };
 const cellSize = 30;
 const padding = cellSize;
@@ -120,6 +159,14 @@ const messageEl = document.getElementById('message');
 const cutHeadBtn = document.getElementById('cutHead');
 const cutTailBtn = document.getElementById('cutTail');
 const replayBtn = document.getElementById('replayDemo');
+const demoBoards = [
+  document.getElementById('demo1'),
+  document.getElementById('demo2')
+];
+const demoCaptionEls = [
+  document.getElementById('caption1'),
+  document.getElementById('caption2')
+];
 const statsBlack = document.getElementById('statsBlack');
 const statsWhite = document.getElementById('statsWhite');
 const moveCount = {black:0, white:0};
@@ -403,8 +450,10 @@ document.getElementById('startGame').onclick = ()=>{
   updateCutButtons();
 };
 
-function runDemo(moves, done){
-  const demoCanvas = document.getElementById('demoBoard');
+function runDemo(canvas, captionEl, seq){
+  const moves = seq.moves;
+  const captions = seq.captions;
+  const demoCanvas = canvas;
   const demoSize = 5;
   const demoCell = 30;
   const dpad = demoCell;
@@ -434,12 +483,15 @@ function runDemo(moves, done){
     });
   }
   let idx=0;
+  captionEl.textContent = captions[0];
   function step(){
     if(idx>=moves.length){
-      if(done) setTimeout(done,1000);
+      setTimeout(()=>{idx=0; placed.length=0; draw(); captionEl.textContent=captions[0]; setTimeout(step,800);},1000);
       return;
     }
-    const m=moves[idx++];
+    const m=moves[idx];
+    captionEl.textContent = captions[idx];
+    idx++;
     if(m.remove){
       const i=placed.findIndex(p=>p.x===m.remove.x&&p.y===m.remove.y);
       if(i>=0) placed.splice(i,1);
@@ -449,6 +501,9 @@ function runDemo(moves, done){
       placed.push(m);
     }
     draw();
+    if(idx < captions.length){
+      captionEl.textContent = captions[idx];
+    }
     setTimeout(step,800);
   }
   draw();
@@ -457,28 +512,26 @@ function runDemo(moves, done){
 
 function cycleDemos(){
   const seqs=[
-    [
+    {moves:[
       {x:2,y:2,color:'black'},
       {x:3,y:2,color:'white'},
       {x:1,y:2,color:'black'},
       {x:4,y:2,color:'white'},
       {remove:{x:1,y:2}},
       {x:1,y:3,color:'black'}
-    ],
-    [
+    ], captions:texts[lang].demoCaptions[0]},
+    {moves:[
       {x:1,y:2,color:'black'},
       {x:2,y:2,color:'black'},
       {x:3,y:2,color:'black'},
       {x:4,y:2,color:'white'},
       {cutHead:true},
       {x:0,y:2,color:'black'}
-    ]
+    ], captions:texts[lang].demoCaptions[1]}
   ];
-  let i=0;
-  const next=()=>{
-    runDemo(seqs[i],()=>{ i=(i+1)%seqs.length; next(); });
-  };
-  next();
+  demoBoards.forEach((canvas, i)=>{
+    runDemo(canvas, demoCaptionEls[i], seqs[i]);
+  });
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{applyLang(); cycleDemos();});
