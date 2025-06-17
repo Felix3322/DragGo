@@ -1,18 +1,146 @@
+// Copyright 2025 Felix Liu
+// Released under the GPLv3
 const boardSize = 19;
+const langSelect = document.getElementById('langSelect');
+let lang = localStorage.getItem('lang') || langSelect.value;
+langSelect.value = lang;
+
+const texts = {
+  en: {
+    title: 'Snake Blocking Game',
+    restart: 'Restart',
+    cutHead: 'Cut Head',
+    cutTail: 'Cut Tail',
+    start: 'Start',
+    hint: 'Valid moves for the current player are highlighted with green dots.',
+    rules: `<ol>
+      <li>Each player starts from any <strong>star point</strong>.</li>
+      <li>On your turn, place one stone next to either head or tail of your snake.</li>
+      <li>After every five moves, you may move diagonally once on your next turn; if unused that turn, the chance is lost.</li>
+      <li>An end is <em>blocked</em> when the intersection directly forward is off the board or occupied.</li>
+      <li>The head cannot be extended when blocked unless you cut it off. Cutting is shared with tail and can be used only once per game.</li>
+      <li>The tail may optionally be cut from the middle when blocked, removing the blocked half.</li>
+      <li>A red box marks each player's last stone.</li>
+      <li>If both ends are blocked, that player loses.</li>
+    </ol>`,
+    onlineTitle: 'Online Mode',
+    login: 'Login',
+    close: 'Close',
+    onlineBtn: 'Online',
+    username: 'Username',
+    password: 'Password',
+    networkError: 'Network error',
+    black: 'Black',
+    white: 'White',
+    move: ' to move',
+    diag: ' (diagonal available)',
+    wins: ' wins!',
+    length: 'Length',
+    moves: 'Moves',
+    diagAvail: 'Diagonal'
+  },
+  zh: {
+    title: '蛇堵棋',
+    restart: '重新开始',
+    cutHead: '截断头部',
+    cutTail: '截断尾部',
+    start: '开始',
+    hint: '当前可下位置以绿色点标示。',
+    rules: `<ol>
+      <li>双方从任意<strong>星位</strong>开始。</li>
+      <li>每回合在自己蛇的头或尾相邻处落子。</li>
+      <li>每下五子后，下一回合可斜走一步，若不使用则失效。</li>
+      <li>若某端继续前进遇到棋盘外或棋子，则视为被堵。</li>
+      <li>蛇头被堵后除非截断，否则不能再从该端下子；全局只允许一次截断，头尾共用。</li>
+      <li>蛇尾被堵时可选择从中间截去被堵的一半。</li>
+      <li>红框标记双方最后落子的位置。</li>
+      <li>若一条蛇两端皆被堵，则其对手获胜。</li>
+    </ol>`,
+    onlineTitle: '联机模式',
+    login: '登录',
+    close: '关闭',
+    onlineBtn: '联机模式',
+    username: '用户名',
+    password: '密码',
+    networkError: '网络错误',
+    black: '黑',
+    white: '白',
+    move: '方行动',
+    diag: '（可斜走）',
+    wins: '方获胜！',
+    length: '长度',
+    moves: '计数',
+    diagAvail: '斜走'
+  }
+};
+
+function t(key){
+  return texts[lang][key];
+}
+
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.getElementById('title').textContent = t('title');
+  document.title = t('title');
+  document.getElementById('restart').textContent = t('restart');
+  cutHeadBtn.textContent = t('cutHead');
+  cutTailBtn.textContent = t('cutTail');
+  document.getElementById('startGame').textContent = t('start');
+  document.getElementById('hint').textContent = t('hint');
+  document.getElementById('rules').innerHTML = t('rules');
+  document.getElementById('onlineTitle').textContent = t('onlineTitle');
+  document.getElementById('loginBtn').textContent = t('login');
+  document.getElementById('closeOnline').textContent = t('close');
+  document.getElementById('onlineBtn').textContent = t('onlineBtn');
+  document.getElementById('username').placeholder = t('username');
+  document.getElementById('password').placeholder = t('password');
+  if(messageEl.textContent)
+    switchPlayer(true); // refresh current turn text
+  updateStats();
+}
+
+langSelect.onchange = ()=>{
+  lang = langSelect.value;
+  localStorage.setItem('lang', lang);
+  applyLang();
+};
 const cellSize = 30;
 const padding = cellSize;
 const canvas = document.getElementById('board');
-const ctx = canvas.getContext('2d');
-canvas.width = canvas.height = padding * 2 + cellSize * (boardSize - 1);
+const ctx = setupCanvas(canvas, padding * 2 + cellSize * (boardSize - 1), padding * 2 + cellSize * (boardSize - 1));
 let current = 'black';
 const snakes = {black: [], white: []};
 const occupied = {};
 const messageEl = document.getElementById('message');
 const cutHeadBtn = document.getElementById('cutHead');
 const cutTailBtn = document.getElementById('cutTail');
+const statsBlack = document.getElementById('statsBlack');
+const statsWhite = document.getElementById('statsWhite');
 const moveCount = {black:0, white:0};
 const diagonalChance = {black:false, white:false};
+const lastMove = {black:null, white:null};
+let cutAvailable = true;
 let availableMoves = [];
+
+function setupCanvas(c,w,h){
+  const dpr = window.devicePixelRatio || 1;
+  c.style.width = w+'px';
+  c.style.height = h+'px';
+  c.width = w*dpr;
+  c.height = h*dpr;
+  const context = c.getContext('2d');
+  context.scale(dpr,dpr);
+  return context;
+}
+
+function updateStats(){
+  statsBlack.innerHTML = `${t('black')}:<br>${t('length')}: ${snakes.black.length}`+
+    `<br>${t('moves')}: ${moveCount.black}<br>${t('diagAvail')}: `+
+    `${diagonalChance.black ? '✓' : '✗'}`;
+  statsWhite.innerHTML = `${t('white')}:<br>${t('length')}: ${snakes.white.length}`+
+    `<br>${t('moves')}: ${moveCount.white}<br>${t('diagAvail')}: `+
+    `${diagonalChance.white ? '✓' : '✗'}`;
+}
 
 function updateAvailableMoves(){
   availableMoves = [];
@@ -29,7 +157,11 @@ function updateAvailableMoves(){
     if(diagonalChance[current]){
       dirs.push({x:1,y:1},{x:1,y:-1},{x:-1,y:1},{x:-1,y:-1});
     }
-    const ends = [mySnake[0], mySnake[mySnake.length-1]];
+    const ends = [];
+    const headBlocked = blockedForward(mySnake,0);
+    const tailBlocked = blockedForward(mySnake,mySnake.length-1);
+    if(!headBlocked) ends.push(mySnake[0]);
+    if(!tailBlocked) ends.push(mySnake[mySnake.length-1]);
     ends.forEach(end=>{
       dirs.forEach(d=>{
         const nx=end.x+d.x;
@@ -66,12 +198,20 @@ function drawBoard(){
   Object.entries(snakes).forEach(([color,list])=>{
     list.forEach(pt=>drawStone(pt.x,pt.y,color));
   });
+  ctx.strokeStyle='red';
+  ctx.lineWidth=2;
+  Object.entries(lastMove).forEach(([color,pt])=>{
+    if(pt){
+      ctx.strokeRect(padding+pt.x*cellSize-15,padding+pt.y*cellSize-15,30,30);
+    }
+  });
   ctx.fillStyle='rgba(0,255,0,0.4)';
   availableMoves.forEach(p=>{
     ctx.beginPath();
     ctx.arc(padding+p.x*cellSize,padding+p.y*cellSize,6,0,Math.PI*2);
     ctx.fill();
   });
+  updateStats();
 }
 
 function drawStone(x,y,color){
@@ -100,21 +240,24 @@ canvas.addEventListener('click', e=>{
   }else{
     const head = mySnake[0];
     const tail = mySnake[mySnake.length-1];
-    const valid = adjacent(x,y,head) || adjacent(x,y,tail) ||
-                  (diagonalChance[current] && (diagonal(x,y,head) || diagonal(x,y,tail)));
+    const headBlocked = blockedForward(mySnake,0);
+    const tailBlocked = blockedForward(mySnake,mySnake.length-1);
+    const valid = ((!headBlocked && adjacent(x,y,head)) || (!tailBlocked && adjacent(x,y,tail))) ||
+                  (diagonalChance[current] && ((!headBlocked && diagonal(x,y,head)) || (!tailBlocked && diagonal(x,y,tail))));
     if(!valid) return;
-    if(diagonalChance[current] && diagonal(x,y,head)){
+    if(diagonalChance[current] && !headBlocked && diagonal(x,y,head)){
       mySnake.unshift({x,y});
       diagUsed=true;
-    }else if(diagonalChance[current] && diagonal(x,y,tail)){
+    }else if(diagonalChance[current] && !tailBlocked && diagonal(x,y,tail)){
       mySnake.push({x,y});
       diagUsed=true;
-    }else if(adjacent(x,y,head)){
+    }else if(!headBlocked && adjacent(x,y,head)){
       mySnake.unshift({x,y});
     }else{
       mySnake.push({x,y});
     }
     occupied[key]=current;
+    lastMove[current] = {x,y};
   }
   finishMove(diagUsed);
   switchPlayer();
@@ -137,6 +280,7 @@ function diagonal(x,y,p){
 function place(x,y){
   snakes[current].push({x,y});
   occupied[posKey(x,y)] = current;
+  lastMove[current] = {x,y};
 }
 
 function finishMove(diagonalUsed){
@@ -182,12 +326,12 @@ function blockedForward(snake,index){
 
 function updateCutButtons(){
   const mySnake=snakes[current];
-  if(mySnake.length>=2 && blockedForward(mySnake,0)){
+  if(mySnake.length>=2 && blockedForward(mySnake,0) && cutAvailable){
     cutHeadBtn.classList.remove('hidden');
   }else{
     cutHeadBtn.classList.add('hidden');
   }
-  if(mySnake.length>=2 && blockedForward(mySnake,mySnake.length-1)){
+  if(mySnake.length>=2 && blockedForward(mySnake,mySnake.length-1) && cutAvailable){
     cutTailBtn.classList.remove('hidden');
   }else{
     cutTailBtn.classList.add('hidden');
@@ -198,24 +342,29 @@ cutHeadBtn.onclick=()=>{ cutEnd(true); };
 cutTailBtn.onclick=()=>{ cutEnd(false); };
 
 function cutEnd(head){
+  if(!cutAvailable) return;
   const mySnake=snakes[current];
   if(mySnake.length===0) return;
-  let removed;
   if(head){
-    removed=mySnake.shift();
+    const removed=mySnake.shift();
+    delete occupied[posKey(removed.x,removed.y)];
   }else{
-    removed=mySnake.pop();
+    const cutIndex=Math.floor(mySnake.length/2);
+    for(let i=mySnake.length-1;i>=cutIndex;i--){
+      const p=mySnake.pop();
+      delete occupied[posKey(p.x,p.y)];
+    }
   }
-  delete occupied[posKey(removed.x,removed.y)];
+  cutAvailable=false;
   drawBoard();
   updateCutButtons();
 }
 
-function switchPlayer(){
-  if(checkWin()) return;
-  current = current==='black'?'white':'black';
-  messageEl.textContent = (current==='black'?'黑':'白')+"方行动"+
-    (diagonalChance[current]?"（可斜走）":"");
+function switchPlayer(refreshOnly=false){
+  if(!refreshOnly && checkWin()) return;
+  if(!refreshOnly) current = current==='black'?'white':'black';
+  messageEl.textContent = t(current) + t('move') +
+    (diagonalChance[current]?t('diag'):'');
   updateCutButtons();
 }
 
@@ -228,7 +377,7 @@ function checkWin(){
   const headBlocked=blockedForward(s,0);
   const tailBlocked=blockedForward(s,s.length-1);
   if(headBlocked && tailBlocked){
-    messageEl.textContent=(current==='black'?'黑':'白')+"方获胜！";
+    messageEl.textContent=t(current)+t('wins');
     canvas.removeEventListener('click',arguments.callee);
     cutHeadBtn.classList.add('hidden');
     cutTailBtn.classList.add('hidden');
@@ -242,25 +391,17 @@ document.getElementById('restart').onclick = ()=>location.reload();
 document.getElementById('startGame').onclick = ()=>{
   document.getElementById('instructions').classList.add('hidden');
   drawBoard();
-  messageEl.textContent = '黑方行动' + (diagonalChance.black ? '（可斜走）' : '');
+  messageEl.textContent = t('black') + t('move') + (diagonalChance.black ? t('diag') : '');
   updateCutButtons();
 };
 
-function showDemo(){
+function runDemo(moves, done){
   const demoCanvas = document.getElementById('demoBoard');
-  const dctx = demoCanvas.getContext('2d');
   const demoSize = 5;
   const demoCell = 30;
   const dpad = demoCell;
-  demoCanvas.width = demoCanvas.height = dpad*2 + demoCell*(demoSize-1);
-  const moves = [
-    {x:2,y:2,color:'black'},
-    {x:3,y:2,color:'white'},
-    {x:1,y:2,color:'black'},
-    {x:4,y:2,color:'white'},
-    {remove:{x:1,y:2}},
-    {x:1,y:3,color:'black'}
-  ];
+  const dSize = dpad*2 + demoCell*(demoSize-1);
+  const dctx = setupCanvas(demoCanvas, dSize, dSize);
   const placed=[];
   function draw(){
     dctx.clearRect(0,0,demoCanvas.width,demoCanvas.height);
@@ -286,19 +427,69 @@ function showDemo(){
   }
   let idx=0;
   function step(){
-    if(idx>=moves.length) return;
+    if(idx>=moves.length){
+      if(done) setTimeout(done,1000);
+      return;
+    }
     const m=moves[idx++];
     if(m.remove){
       const i=placed.findIndex(p=>p.x===m.remove.x&&p.y===m.remove.y);
       if(i>=0) placed.splice(i,1);
+    }else if(m.cutHead){
+      placed.shift();
     }else{
       placed.push(m);
     }
     draw();
-    if(idx<moves.length) setTimeout(step,800);
+    setTimeout(step,800);
   }
   draw();
   setTimeout(step,500);
 }
 
-document.addEventListener('DOMContentLoaded', showDemo);
+function cycleDemos(){
+  const seqs=[
+    [
+      {x:2,y:2,color:'black'},
+      {x:3,y:2,color:'white'},
+      {x:1,y:2,color:'black'},
+      {x:4,y:2,color:'white'},
+      {remove:{x:1,y:2}},
+      {x:1,y:3,color:'black'}
+    ],
+    [
+      {x:1,y:2,color:'black'},
+      {x:2,y:2,color:'black'},
+      {x:3,y:2,color:'black'},
+      {x:4,y:2,color:'white'},
+      {cutHead:true},
+      {x:0,y:2,color:'black'}
+    ]
+  ];
+  let i=0;
+  const next=()=>{
+    runDemo(seqs[i],()=>{ i=(i+1)%seqs.length; next(); });
+  };
+  next();
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{applyLang(); cycleDemos();});
+document.getElementById('onlineBtn').onclick = ()=>{
+  document.getElementById('online').classList.remove('hidden');
+};
+document.getElementById('closeOnline').onclick = ()=>{
+  document.getElementById('online').classList.add('hidden');
+};
+document.getElementById('loginBtn').onclick = async ()=>{
+  const username=document.getElementById('username').value;
+  const password=document.getElementById('password').value;
+  try{
+    await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
+    const res=await fetch('/api/leaderboard');
+    const board=await res.json();
+    const list=board.map(item=>`${item.user} ${item.elo}`).join('<br>');
+    document.getElementById('leaderboard').innerHTML=list;
+  }catch(e){
+    document.getElementById('leaderboard').textContent=t('networkError');
+  }
+};
