@@ -538,6 +538,7 @@ function runDemo(canvas, captionEl, seq){
   }
   captionEl.textContent = captions[0];
   function step(){
+    if(stopped) return;
     if(idx>=moves.length){
       schedule(()=>{idx=0; placed.length=0; draw(); captionEl.textContent=captions[0]; schedule(step,800);},1000);
       return;
