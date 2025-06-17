@@ -1,37 +1,47 @@
+<!-- Copyright 2025 Felix Liu -->
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snake Blocking Game / 蛇堵棋</title>
+<title>Snake Blocking Game</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <canvas id="board" width="600" height="600"></canvas>
-  <div id="message"></div>
-  <div id="controls">
-    <button id="restart"></button>
-    <button id="cutHead" class="hidden"></button>
-    <button id="cutTail" class="hidden"></button>
-  </div>
-  <div id="instructions" class="overlay">
-    <div id="instructionsText"></div>
-    <canvas id="demoCut" class="demo" width="200" height="200"></canvas>
-    <canvas id="demoDiag" class="demo" width="200" height="200"></canvas>
-    <button id="startGame"></button>
-    <button id="langToggle">English</button>
-  </div>
+<div id="langSwitch">
+  <select id="langSelect">
+    <option value="en">English</option>
+    <option value="zh">中文</option>
+  </select>
+</div>
+<div id="statsBlack" class="stats"></div>
+<canvas id="board" width="600" height="600"></canvas>
+<div id="message"></div>
+<div id="statsWhite" class="stats"></div>
+<div id="controls">
+  <button id="restart">Restart</button>
+  <button id="cutHead" class="hidden">Cut Head</button>
+  <button id="cutTail" class="hidden">Cut Tail</button>
+</div>
+<div id="instructions" class="overlay">
+  <h1 id="title">Snake Blocking Game</h1>
+  <div id="rules"></div>
+  <p id="hint"></p>
+  <canvas id="demoBoard" width="200" height="200"></canvas>
+  <button id="startGame">Start</button>
+</div>
 <div id="online" class="overlay hidden">
-  <h2>Online Mode</h2>
+  <h2 id="onlineTitle">Online Mode</h2>
   <div>
-    <input id="username" placeholder="用户名">
-    <input id="password" type="password" placeholder="密码">
-    <button id="loginBtn">Login / 登录</button>
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password">
+    <button id="loginBtn">Login</button>
   </div>
   <div id="leaderboard"></div>
   <button id="closeOnline">Close</button>
 </div>
-<button id="onlineBtn">联机模式</button>
+<button id="onlineBtn">Online</button>
 <script src="script.js" defer></script>
+<!-- Copyright 2025 Felix Liu -->
 </body>
 </html>
