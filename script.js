@@ -325,8 +325,46 @@ function aiMove(){
   if(current!=='white') return;
   updateAvailableMoves();
   if(availableMoves.length===0) return;
-  const m=availableMoves[Math.floor(Math.random()*availableMoves.length)];
-  makeMove(m.x,m.y);
+  let best=null;
+  let bestScore=-Infinity;
+  for(const m of availableMoves){
+    const s=scoreMove(m.x,m.y);
+    if(s>bestScore){
+      bestScore=s;
+      best=m;
+    }
+  }
+  const move=best||availableMoves[0];
+  makeMove(move.x,move.y);
+}
+
+function scoreMove(x,y){
+  let score=0;
+  const oppSnake=snakes.black;
+  if(oppSnake.length){
+    const head=oppSnake[0];
+    const tail=oppSnake[oppSnake.length-1];
+    if(adjacent(x,y,head)) score+=2;
+    if(adjacent(x,y,tail)) score+=2;
+    if(!blockedForward(oppSnake,0)){
+      const dir=forwardDir(oppSnake,0);
+      if(x===head.x+dir.x && y===head.y+dir.y) score+=5;
+    }
+    if(!blockedForward(oppSnake,oppSnake.length-1)){
+      const dir=forwardDir(oppSnake,oppSnake.length-1);
+      if(x===tail.x+dir.x && y===tail.y+dir.y) score+=5;
+    }
+  }
+  const mySnake=snakes.white;
+  if(mySnake.length){
+    const head=mySnake[0];
+    const tail=mySnake[mySnake.length-1];
+    if(adjacent(x,y,head)||diagonal(x,y,head)) score+=1;
+    if(adjacent(x,y,tail)||diagonal(x,y,tail)) score+=1;
+  }else{
+    if(x===9 && y===9) score+=3;
+  }
+  return score+Math.random()*0.01;
 }
 
 canvas.addEventListener('click', e=>{
