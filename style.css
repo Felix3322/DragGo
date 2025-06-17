@@ -4,7 +4,7 @@ body { font-family: sans-serif; text-align: center; position: relative; }
 #message { margin-top: 10px; font-weight: bold; }
 #controls { margin-top: 10px; }
 button { margin: 0 5px; }
-.overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); color:#fff; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:left; padding:20px; }
+.overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); color:#fff; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:left; padding:20px; overflow:auto; }
 #langSwitch {
   position: fixed;
   top: 5px;
@@ -12,7 +12,8 @@ button { margin: 0 5px; }
   z-index: 1000;
 }
 .hidden { display:none; }
-.demoFrame { margin:20px 0; }
+.demoFrame { margin:20px; flex:0 0 auto; }
+#demoContainer { display:flex; gap:20px; justify-content:center; overflow-x:auto; }
 .demoBoard { background:#f5d6a0; border:1px solid #333; display:block; margin:0 auto; }
 .demoCaption { margin-top:10px; text-align:center; font-style:italic; }
 #online input { margin:5px; }

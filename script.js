@@ -163,6 +163,7 @@ const demoCaptionEls = [
   document.getElementById('caption1'),
   document.getElementById('caption2')
 ];
+let demoStops = [];
 const statsBlack = document.getElementById('statsBlack');
 const statsWhite = document.getElementById('statsWhite');
 const moveCount = {black:0, white:0};
@@ -456,6 +457,12 @@ function runDemo(canvas, captionEl, seq){
   const dSize = dpad*2 + demoCell*(demoSize-1);
   const dctx = setupCanvas(demoCanvas, dSize, dSize);
   const placed=[];
+  let idx=0;
+  let timer=null;
+  let stopped=false;
+  function schedule(fn,delay){
+    timer=setTimeout(()=>{if(!stopped) fn();},delay);
+  }
   function draw(){
     dctx.clearRect(0,0,demoCanvas.width,demoCanvas.height);
     dctx.strokeStyle='#333';
@@ -478,11 +485,10 @@ function runDemo(canvas, captionEl, seq){
       dctx.stroke();
     });
   }
-  let idx=0;
   captionEl.textContent = captions[0];
   function step(){
     if(idx>=moves.length){
-      setTimeout(()=>{idx=0; placed.length=0; draw(); captionEl.textContent=captions[0]; setTimeout(step,800);},1000);
+      schedule(()=>{idx=0; placed.length=0; draw(); captionEl.textContent=captions[0]; schedule(step,800);},1000);
       return;
     }
     const m=moves[idx];
@@ -500,13 +506,16 @@ function runDemo(canvas, captionEl, seq){
     if(idx < captions.length){
       captionEl.textContent = captions[idx];
     }
-    setTimeout(step,800);
+    schedule(step,800);
   }
   draw();
-  setTimeout(step,500);
+  schedule(step,500);
+  return ()=>{stopped=true; clearTimeout(timer);};
 }
 
 function cycleDemos(){
+  demoStops.forEach(stop=>stop());
+  demoStops=[];
   const seqs=[
     {moves:[
       {x:2,y:2,color:'black'},
@@ -526,7 +535,7 @@ function cycleDemos(){
     ], captions:texts[lang].demoCaptions[1]}
   ];
   demoBoards.forEach((canvas, i)=>{
-    runDemo(canvas, demoCaptionEls[i], seqs[i]);
+    demoStops.push(runDemo(canvas, demoCaptionEls[i], seqs[i]));
   });
 }
 
