@@ -176,6 +176,7 @@ const lastMove = {black:null, white:null};
 const cutAvailable = {black:true, white:true};
 let availableMoves = [];
 let vsAI = false;
+let skipNextAI = false;
 
 function setupCanvas(c,w,h){
   const dpr = window.devicePixelRatio || 1;
@@ -325,8 +326,57 @@ function aiMove(){
   if(current!=='white') return;
   updateAvailableMoves();
   if(availableMoves.length===0) return;
-  const m=availableMoves[Math.floor(Math.random()*availableMoves.length)];
-  makeMove(m.x,m.y);
+  const m = pickSmartMove();
+  makeMove(m.x, m.y);
+}
+
+function pickSmartMove(){
+  const mySnake = snakes.white;
+  if(mySnake.length >= 2){
+    const headDir = forwardDir(mySnake,0);
+    if(headDir){
+      const hx=mySnake[0].x+headDir.x;
+      const hy=mySnake[0].y+headDir.y;
+      if(isMoveAvailable(hx,hy)) return {x:hx,y:hy};
+    }
+    const tailDir = forwardDir(mySnake,mySnake.length-1);
+    if(tailDir){
+      const tx=mySnake[mySnake.length-1].x+tailDir.x;
+      const ty=mySnake[mySnake.length-1].y+tailDir.y;
+      if(isMoveAvailable(tx,ty)) return {x:tx,y:ty};
+    }
+  }
+  let best=availableMoves[0];
+  let bestScore=-1;
+  availableMoves.forEach(p=>{
+    const dist=Math.min(p.x,boardSize-1-p.x,p.y,boardSize-1-p.y);
+    if(dist>bestScore){
+      bestScore=dist;
+      best=p;
+    }
+  });
+  return best;
+}
+
+function isMoveAvailable(x,y){
+  return availableMoves.some(p=>p.x===x&&p.y===y);
+}
+
+function aiFirstMove(){
+  updateAvailableMoves();
+  if(availableMoves.length===0) return;
+  const starPriority=[
+    {x:9,y:9},
+    {x:9,y:3},{x:9,y:15},{x:3,y:9},{x:15,y:9},
+    {x:3,y:3},{x:3,y:15},{x:15,y:3},{x:15,y:15}
+  ];
+  let choice=null;
+  for(const s of starPriority){
+    if(isMoveAvailable(s.x,s.y)){choice=s;break;}
+  }
+  if(!choice) choice = availableMoves[0];
+  skipNextAI = true;
+  makeMove(choice.x, choice.y);
 }
 
 canvas.addEventListener('click', e=>{
@@ -438,7 +488,8 @@ function switchPlayer(refreshOnly=false){
   messageEl.textContent = t(current) + t('move') +
     (diagonalChance[current]?t('diag'):'');
   updateCutButtons();
-  if(vsAI && current==='white') setTimeout(aiMove, 300);
+  if(vsAI && current==='white' && !skipNextAI) setTimeout(aiMove, 300);
+  if(skipNextAI) skipNextAI = false;
 }
 
 
@@ -465,8 +516,13 @@ document.getElementById('startGame').onclick = ()=>{
   vsAI = document.getElementById('aiToggle').checked;
   document.getElementById('instructions').classList.add('hidden');
   drawBoard();
-  messageEl.textContent = t('black') + t('move') + (diagonalChance.black ? t('diag') : '');
-  updateCutButtons();
+  if(vsAI){
+    aiFirstMove();
+  }else{
+    messageEl.textContent = t('black') + t('move') +
+      (diagonalChance.black ? t('diag') : '');
+    updateCutButtons();
+  }
 };
 
 function runDemo(canvas, captionEl, seq){
