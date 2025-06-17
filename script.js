@@ -37,7 +37,8 @@ const texts = {
     wins: ' wins!',
     length: 'Length',
     moves: 'Moves',
-    diagAvail: 'Diagonal'
+    diagAvail: 'Diagonal',
+    replay: 'Replay Demo'
   },
   zh: {
     title: '蛇堵棋',
@@ -70,7 +71,8 @@ const texts = {
     wins: '方获胜！',
     length: '长度',
     moves: '计数',
-    diagAvail: '斜走'
+    diagAvail: '斜走',
+    replay: '重播教学'
   }
 };
 
@@ -86,6 +88,7 @@ function applyLang(){
   cutHeadBtn.textContent = t('cutHead');
   cutTailBtn.textContent = t('cutTail');
   document.getElementById('startGame').textContent = t('start');
+  document.getElementById('replayDemo').textContent = t('replay');
   document.getElementById('hint').textContent = t('hint');
   document.getElementById('rules').innerHTML = t('rules');
   document.getElementById('onlineTitle').textContent = t('onlineTitle');
@@ -114,6 +117,7 @@ const occupied = {};
 const messageEl = document.getElementById('message');
 const cutHeadBtn = document.getElementById('cutHead');
 const cutTailBtn = document.getElementById('cutTail');
+const replayBtn = document.getElementById('replayDemo');
 const statsBlack = document.getElementById('statsBlack');
 const statsWhite = document.getElementById('statsWhite');
 const moveCount = {black:0, white:0};
@@ -474,6 +478,7 @@ function cycleDemos(){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{applyLang(); cycleDemos();});
+replayBtn.onclick = cycleDemos;
 document.getElementById('onlineBtn').onclick = ()=>{
   document.getElementById('online').classList.remove('hidden');
 };
