@@ -1,3 +1,4 @@
+/* Copyright 2025 Felix Liu - Released under the GPLv3 */
 body { font-family: sans-serif; text-align: center; position: relative; }
 #board { border: 1px solid #333; display: block; margin: 20px auto; background-color: #f5d6a0; }
 #message { margin-top: 10px; font-weight: bold; }

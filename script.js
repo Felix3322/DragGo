@@ -7,7 +7,7 @@ langSelect.value = lang;
 
 const texts = {
   en: {
-    title: 'Snake Blocking Game',
+    title: 'DragGo',
     restart: 'Restart',
     cutHead: 'Cut Head',
     cutTail: 'Cut Tail',
@@ -37,10 +37,12 @@ const texts = {
     wins: ' wins!',
     length: 'Length',
     moves: 'Moves',
-    diagAvail: 'Diagonal'
+    diagAvail: 'Diagonal',
+    cutAvail: 'Cut',
+    replay: 'Replay Demo'
   },
   zh: {
-    title: '蛇堵棋',
+    title: 'DragGo',
     restart: '重新开始',
     cutHead: '截断头部',
     cutTail: '截断尾部',
@@ -70,7 +72,9 @@ const texts = {
     wins: '方获胜！',
     length: '长度',
     moves: '计数',
-    diagAvail: '斜走'
+    diagAvail: '斜走',
+    cutAvail: '截断',
+    replay: '重播教学'
   }
 };
 
@@ -86,6 +90,7 @@ function applyLang(){
   cutHeadBtn.textContent = t('cutHead');
   cutTailBtn.textContent = t('cutTail');
   document.getElementById('startGame').textContent = t('start');
+  document.getElementById('replayDemo').textContent = t('replay');
   document.getElementById('hint').textContent = t('hint');
   document.getElementById('rules').innerHTML = t('rules');
   document.getElementById('onlineTitle').textContent = t('onlineTitle');
@@ -114,6 +119,7 @@ const occupied = {};
 const messageEl = document.getElementById('message');
 const cutHeadBtn = document.getElementById('cutHead');
 const cutTailBtn = document.getElementById('cutTail');
+const replayBtn = document.getElementById('replayDemo');
 const statsBlack = document.getElementById('statsBlack');
 const statsWhite = document.getElementById('statsWhite');
 const moveCount = {black:0, white:0};
@@ -136,10 +142,12 @@ function setupCanvas(c,w,h){
 function updateStats(){
   statsBlack.innerHTML = `${t('black')}:<br>${t('length')}: ${snakes.black.length}`+
     `<br>${t('moves')}: ${moveCount.black}<br>${t('diagAvail')}: `+
-    `${diagonalChance.black ? '✓' : '✗'}`;
+    `${diagonalChance.black ? '✓' : '✗'}`+
+    `<br>${t('cutAvail')}: ${cutAvailable ? '✓' : '✗'}`;
   statsWhite.innerHTML = `${t('white')}:<br>${t('length')}: ${snakes.white.length}`+
     `<br>${t('moves')}: ${moveCount.white}<br>${t('diagAvail')}: `+
-    `${diagonalChance.white ? '✓' : '✗'}`;
+    `${diagonalChance.white ? '✓' : '✗'}`+
+    `<br>${t('cutAvail')}: ${cutAvailable ? '✓' : '✗'}`;
 }
 
 function updateAvailableMoves(){
@@ -474,6 +482,7 @@ function cycleDemos(){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{applyLang(); cycleDemos();});
+replayBtn.onclick = cycleDemos;
 document.getElementById('onlineBtn').onclick = ()=>{
   document.getElementById('online').classList.remove('hidden');
 };
