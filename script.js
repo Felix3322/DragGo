@@ -18,7 +18,7 @@ const texts = {
       <li>On your turn, place one stone next to either head or tail of your snake.</li>
       <li>After every five moves, you may move diagonally once on your next turn; if unused that turn, the chance is lost.</li>
       <li>An end is <em>blocked</em> when the intersection directly forward is off the board or occupied.</li>
-      <li>The head cannot be extended when blocked unless you cut it off. Cutting is shared with tail and can be used only once per game.</li>
+      <li>The head cannot be extended when blocked unless you cut it off. Each player may cut once per game on either end.</li>
       <li>The tail may optionally be cut from the middle when blocked, removing the blocked half.</li>
       <li>A red box marks each player's last stone.</li>
       <li>If both ends are blocked, that player loses.</li>
@@ -29,6 +29,7 @@ const texts = {
     onlineBtn: 'Online',
     username: 'Username',
     password: 'Password',
+    ai: 'AI Opponent',
     networkError: 'Network error',
     black: 'Black',
     white: 'White',
@@ -70,7 +71,7 @@ const texts = {
       <li>每回合在自己蛇的头或尾相邻处落子。</li>
       <li>每下五子后，下一回合可斜走一步，若不使用则失效。</li>
       <li>若某端继续前进遇到棋盘外或棋子，则视为被堵。</li>
-      <li>蛇头被堵后除非截断，否则不能再从该端下子；全局只允许一次截断，头尾共用。</li>
+      <li>蛇头被堵后除非截断，否则不能再从该端下子；每位玩家有一次截断机会，可选择头或尾。</li>
       <li>蛇尾被堵时可选择从中间截去被堵的一半。</li>
       <li>红框标记双方最后落子的位置。</li>
       <li>若一条蛇两端皆被堵，则其对手获胜。</li>
@@ -81,6 +82,7 @@ const texts = {
     onlineBtn: '联机模式',
     username: '用户名',
     password: '密码',
+    ai: '人机对战',
     networkError: '网络错误',
     black: '黑',
     white: '白',
@@ -132,6 +134,7 @@ function applyLang(){
   document.getElementById('onlineBtn').textContent = t('onlineBtn');
   document.getElementById('username').placeholder = t('username');
   document.getElementById('password').placeholder = t('password');
+  document.getElementById('aiLabel').textContent = t('ai');
   demoCaptionEls[0].textContent = texts[lang].demoCaptions[0][0];
   demoCaptionEls[1].textContent = texts[lang].demoCaptions[1][0];
   if(messageEl.textContent)
@@ -170,8 +173,9 @@ const statsWhite = document.getElementById('statsWhite');
 const moveCount = {black:0, white:0};
 const diagonalChance = {black:false, white:false};
 const lastMove = {black:null, white:null};
-let cutAvailable = true;
+const cutAvailable = {black:true, white:true};
 let availableMoves = [];
+let vsAI = false;
 
 function setupCanvas(c,w,h){
   const dpr = window.devicePixelRatio || 1;
@@ -188,11 +192,11 @@ function updateStats(){
   statsBlack.innerHTML = `${t('black')}:<br>${t('length')}: ${snakes.black.length}`+
     `<br>${t('moves')}: ${moveCount.black}<br>${t('diagAvail')}: `+
     `${diagonalChance.black ? '✓' : '✗'}`+
-    `<br>${t('cutAvail')}: ${cutAvailable ? '✓' : '✗'}`;
+    `<br>${t('cutAvail')}: ${cutAvailable.black ? '✓' : '✗'}`;
   statsWhite.innerHTML = `${t('white')}:<br>${t('length')}: ${snakes.white.length}`+
     `<br>${t('moves')}: ${moveCount.white}<br>${t('diagAvail')}: `+
     `${diagonalChance.white ? '✓' : '✗'}`+
-    `<br>${t('cutAvail')}: ${cutAvailable ? '✓' : '✗'}`;
+    `<br>${t('cutAvail')}: ${cutAvailable.white ? '✓' : '✗'}`;
 }
 
 function updateAvailableMoves(){
@@ -277,45 +281,59 @@ function drawStone(x,y,color){
   ctx.stroke();
 }
 
+
 function posKey(x,y){ return x+','+y; }
 
-canvas.addEventListener('click', e=>{
-  const rect = canvas.getBoundingClientRect();
-  const x = Math.round((e.clientX - rect.left - padding)/cellSize);
-  const y = Math.round((e.clientY - rect.top - padding)/cellSize);
-  if(x<0||x>=boardSize||y<0||y>=boardSize) return;
-  const key = posKey(x,y);
-  if(occupied[key]) return;
-  const mySnake = snakes[current];
+function makeMove(x,y){
+  if(x<0||x>=boardSize||y<0||y>=boardSize) return false;
+  const key=posKey(x,y);
+  if(occupied[key]) return false;
+  const mySnake=snakes[current];
   let diagUsed=false;
   if(mySnake.length===0){
-    if(!isStar(x,y)) return;
+    if(!isStar(x,y)) return false;
     place(x,y);
   }else{
-    const head = mySnake[0];
-    const tail = mySnake[mySnake.length-1];
-    const headBlocked = blockedForward(mySnake,0);
-    const tailBlocked = blockedForward(mySnake,mySnake.length-1);
-    const valid = ((!headBlocked && adjacent(x,y,head)) || (!tailBlocked && adjacent(x,y,tail))) ||
-                  (diagonalChance[current] && ((!headBlocked && diagonal(x,y,head)) || (!tailBlocked && diagonal(x,y,tail))));
-    if(!valid) return;
-    if(diagonalChance[current] && !headBlocked && diagonal(x,y,head)){
+    const head=mySnake[0];
+    const tail=mySnake[mySnake.length-1];
+    const headBlocked=blockedForward(mySnake,0);
+    const tailBlocked=blockedForward(mySnake,mySnake.length-1);
+    const valid=((!headBlocked&&adjacent(x,y,head))||(!tailBlocked&&adjacent(x,y,tail)))||
+      (diagonalChance[current]&&((!headBlocked&&diagonal(x,y,head))||(!tailBlocked&&diagonal(x,y,tail))));
+    if(!valid) return false;
+    if(diagonalChance[current]&&!headBlocked&&diagonal(x,y,head)){
       mySnake.unshift({x,y});
       diagUsed=true;
-    }else if(diagonalChance[current] && !tailBlocked && diagonal(x,y,tail)){
+    }else if(diagonalChance[current]&&!tailBlocked&&diagonal(x,y,tail)){
       mySnake.push({x,y});
       diagUsed=true;
-    }else if(!headBlocked && adjacent(x,y,head)){
+    }else if(!headBlocked&&adjacent(x,y,head)){
       mySnake.unshift({x,y});
     }else{
       mySnake.push({x,y});
     }
     occupied[key]=current;
-    lastMove[current] = {x,y};
+    lastMove[current]={x,y};
   }
   finishMove(diagUsed);
   switchPlayer();
   drawBoard();
+  return true;
+}
+
+function aiMove(){
+  if(current!=='white') return;
+  updateAvailableMoves();
+  if(availableMoves.length===0) return;
+  const m=availableMoves[Math.floor(Math.random()*availableMoves.length)];
+  makeMove(m.x,m.y);
+}
+
+canvas.addEventListener('click', e=>{
+  const rect = canvas.getBoundingClientRect();
+  const x = Math.round((e.clientX - rect.left - padding)/cellSize);
+  const y = Math.round((e.clientY - rect.top - padding)/cellSize);
+  makeMove(x,y);
 });
 
 function isStar(x,y){
@@ -380,12 +398,12 @@ function blockedForward(snake,index){
 
 function updateCutButtons(){
   const mySnake=snakes[current];
-  if(mySnake.length>=2 && blockedForward(mySnake,0) && cutAvailable){
+  if(mySnake.length>=2 && blockedForward(mySnake,0) && cutAvailable[current]){
     cutHeadBtn.classList.remove('hidden');
   }else{
     cutHeadBtn.classList.add('hidden');
   }
-  if(mySnake.length>=2 && blockedForward(mySnake,mySnake.length-1) && cutAvailable){
+  if(mySnake.length>=2 && blockedForward(mySnake,mySnake.length-1) && cutAvailable[current]){
     cutTailBtn.classList.remove('hidden');
   }else{
     cutTailBtn.classList.add('hidden');
@@ -396,7 +414,7 @@ cutHeadBtn.onclick=()=>{ cutEnd(true); };
 cutTailBtn.onclick=()=>{ cutEnd(false); };
 
 function cutEnd(head){
-  if(!cutAvailable) return;
+  if(!cutAvailable[current]) return;
   const mySnake=snakes[current];
   if(mySnake.length===0) return;
   if(head){
@@ -409,7 +427,7 @@ function cutEnd(head){
       delete occupied[posKey(p.x,p.y)];
     }
   }
-  cutAvailable=false;
+  cutAvailable[current]=false;
   drawBoard();
   updateCutButtons();
 }
@@ -420,6 +438,7 @@ function switchPlayer(refreshOnly=false){
   messageEl.textContent = t(current) + t('move') +
     (diagonalChance[current]?t('diag'):'');
   updateCutButtons();
+  if(vsAI && current==='white') setTimeout(aiMove, 300);
 }
 
 
@@ -443,6 +462,7 @@ function checkWin(){
 document.getElementById('restart').onclick = ()=>location.reload();
 
 document.getElementById('startGame').onclick = ()=>{
+  vsAI = document.getElementById('aiToggle').checked;
   document.getElementById('instructions').classList.add('hidden');
   drawBoard();
   messageEl.textContent = t('black') + t('move') + (diagonalChance.black ? t('diag') : '');
