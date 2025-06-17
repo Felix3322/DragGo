@@ -16,7 +16,6 @@ button { margin: 0 5px; }
 #demoContainer { display:flex; gap:20px; justify-content:center; overflow-x:auto; }
 .demoBoard { background:#f5d6a0; border:1px solid #333; display:block; margin:0 auto; }
 .demoCaption { margin-top:10px; text-align:center; font-style:italic; }
-#online input { margin:5px; }
 .stats { position:absolute; top:50px; width:150px; }
 #statsBlack { left:5px; text-align:right; }
 #statsWhite { right:5px; text-align:left; }

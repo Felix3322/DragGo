@@ -23,14 +23,7 @@ const texts = {
       <li>A red box marks each player's last stone.</li>
       <li>If both ends are blocked, that player loses.</li>
     </ol>`,
-    onlineTitle: 'Online Mode',
-    login: 'Login',
-    close: 'Close',
-    onlineBtn: 'Online',
-    username: 'Username',
-    password: 'Password',
     ai: 'AI Opponent',
-    networkError: 'Network error',
     black: 'Black',
     white: 'White',
     move: ' to move',
@@ -76,14 +69,7 @@ const texts = {
       <li>红框标记双方最后落子的位置。</li>
       <li>若一条蛇两端皆被堵，则其对手获胜。</li>
     </ol>`,
-    onlineTitle: '联机模式',
-    login: '登录',
-    close: '关闭',
-    onlineBtn: '联机模式',
-    username: '用户名',
-    password: '密码',
     ai: '人机对战',
-    networkError: '网络错误',
     black: '黑',
     white: '白',
     move: '方行动',
@@ -128,12 +114,6 @@ function applyLang(){
   document.getElementById('startGame').textContent = t('start');
   document.getElementById('hint').textContent = t('hint');
   document.getElementById('rules').innerHTML = t('rules');
-  document.getElementById('onlineTitle').textContent = t('onlineTitle');
-  document.getElementById('loginBtn').textContent = t('login');
-  document.getElementById('closeOnline').textContent = t('close');
-  document.getElementById('onlineBtn').textContent = t('onlineBtn');
-  document.getElementById('username').placeholder = t('username');
-  document.getElementById('password').placeholder = t('password');
   document.getElementById('aiLabel').textContent = t('ai');
   demoCaptionEls[0].textContent = texts[lang].demoCaptions[0][0];
   demoCaptionEls[1].textContent = texts[lang].demoCaptions[1][0];
@@ -176,7 +156,6 @@ const lastMove = {black:null, white:null};
 const cutAvailable = {black:true, white:true};
 let availableMoves = [];
 let vsAI = false;
-let skipNextAI = false;
 
 function setupCanvas(c,w,h){
   const dpr = window.devicePixelRatio || 1;
@@ -331,53 +310,52 @@ function aiMove(){
 }
 
 function pickSmartMove(){
-  const mySnake = snakes.white;
-  if(mySnake.length >= 2){
-    const headDir = forwardDir(mySnake,0);
-    if(headDir){
-      const hx=mySnake[0].x+headDir.x;
-      const hy=mySnake[0].y+headDir.y;
-      if(isMoveAvailable(hx,hy)) return {x:hx,y:hy};
+  const targets = [];
+  const oppSnake = snakes.black;
+  if(oppSnake.length >= 2){
+    const hd = forwardDir(oppSnake,0);
+    if(hd){
+      const tx=oppSnake[0].x+hd.x;
+      const ty=oppSnake[0].y+hd.y;
+      if(tx>=0&&tx<boardSize&&ty>=0&&ty<boardSize&&!occupied[posKey(tx,ty)])
+        targets.push({x:tx,y:ty});
     }
-    const tailDir = forwardDir(mySnake,mySnake.length-1);
-    if(tailDir){
-      const tx=mySnake[mySnake.length-1].x+tailDir.x;
-      const ty=mySnake[mySnake.length-1].y+tailDir.y;
-      if(isMoveAvailable(tx,ty)) return {x:tx,y:ty};
+    const td = forwardDir(oppSnake,oppSnake.length-1);
+    if(td){
+      const tx=oppSnake[oppSnake.length-1].x+td.x;
+      const ty=oppSnake[oppSnake.length-1].y+td.y;
+      if(tx>=0&&tx<boardSize&&ty>=0&&ty<boardSize&&!occupied[posKey(tx,ty)])
+        targets.push({x:tx,y:ty});
     }
   }
-  let best=availableMoves[0];
-  let bestScore=-1;
-  availableMoves.forEach(p=>{
-    const dist=Math.min(p.x,boardSize-1-p.x,p.y,boardSize-1-p.y);
-    if(dist>bestScore){
-      bestScore=dist;
-      best=p;
+  for(const t of targets){
+    if(isMoveAvailable(t.x,t.y)) return t;
+  }
+  if(targets.length){
+    const visited=new Set();
+    let queue=[...targets];
+    queue.forEach(p=>visited.add(posKey(p.x,p.y)));
+    let idx=0;
+    while(idx<queue.length){
+      const p=queue[idx++];
+      const neighbors=[{x:p.x+1,y:p.y},{x:p.x-1,y:p.y},{x:p.x,y:p.y+1},{x:p.x,y:p.y-1}];
+      for(const nb of neighbors){
+        const key=posKey(nb.x,nb.y);
+        if(nb.x<0||nb.x>=boardSize||nb.y<0||nb.y>=boardSize) continue;
+        if(visited.has(key)||occupied[key]) continue;
+        if(isMoveAvailable(nb.x,nb.y)) return nb;
+        visited.add(key);
+        queue.push(nb);
+      }
     }
-  });
-  return best;
+  }
+  return availableMoves[0];
 }
 
 function isMoveAvailable(x,y){
   return availableMoves.some(p=>p.x===x&&p.y===y);
 }
 
-function aiFirstMove(){
-  updateAvailableMoves();
-  if(availableMoves.length===0) return;
-  const starPriority=[
-    {x:9,y:9},
-    {x:9,y:3},{x:9,y:15},{x:3,y:9},{x:15,y:9},
-    {x:3,y:3},{x:3,y:15},{x:15,y:3},{x:15,y:15}
-  ];
-  let choice=null;
-  for(const s of starPriority){
-    if(isMoveAvailable(s.x,s.y)){choice=s;break;}
-  }
-  if(!choice) choice = availableMoves[0];
-  skipNextAI = true;
-  makeMove(choice.x, choice.y);
-}
 
 canvas.addEventListener('click', e=>{
   const rect = canvas.getBoundingClientRect();
@@ -488,8 +466,7 @@ function switchPlayer(refreshOnly=false){
   messageEl.textContent = t(current) + t('move') +
     (diagonalChance[current]?t('diag'):'');
   updateCutButtons();
-  if(vsAI && current==='white' && !skipNextAI) setTimeout(aiMove, 300);
-  if(skipNextAI) skipNextAI = false;
+  if(vsAI && current==='white') setTimeout(aiMove, 300);
 }
 
 
@@ -516,13 +493,9 @@ document.getElementById('startGame').onclick = ()=>{
   vsAI = document.getElementById('aiToggle').checked;
   document.getElementById('instructions').classList.add('hidden');
   drawBoard();
-  if(vsAI){
-    aiFirstMove();
-  }else{
-    messageEl.textContent = t('black') + t('move') +
-      (diagonalChance.black ? t('diag') : '');
-    updateCutButtons();
-  }
+  messageEl.textContent = t('black') + t('move') +
+    (diagonalChance.black ? t('diag') : '');
+  updateCutButtons();
 };
 
 function runDemo(canvas, captionEl, seq){
@@ -618,22 +591,3 @@ function cycleDemos(){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{applyLang(); cycleDemos();});
-document.getElementById('onlineBtn').onclick = ()=>{
-  document.getElementById('online').classList.remove('hidden');
-};
-document.getElementById('closeOnline').onclick = ()=>{
-  document.getElementById('online').classList.add('hidden');
-};
-document.getElementById('loginBtn').onclick = async ()=>{
-  const username=document.getElementById('username').value;
-  const password=document.getElementById('password').value;
-  try{
-    await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,password})});
-    const res=await fetch('/api/leaderboard');
-    const board=await res.json();
-    const list=board.map(item=>`${item.user} ${item.elo}`).join('<br>');
-    document.getElementById('leaderboard').innerHTML=list;
-  }catch(e){
-    document.getElementById('leaderboard').textContent=t('networkError');
-  }
-};
