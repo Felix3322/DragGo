@@ -147,8 +147,9 @@ langSelect.onchange = ()=>{
 };
 const cellSize = 30;
 const padding = cellSize;
+const boardPixels = padding * 2 + cellSize * (boardSize - 1);
 const canvas = document.getElementById('board');
-const ctx = setupCanvas(canvas, padding * 2 + cellSize * (boardSize - 1), padding * 2 + cellSize * (boardSize - 1));
+const ctx = setupCanvas(canvas, boardPixels, boardPixels);
 let current = 'black';
 const snakes = {black: [], white: []};
 const occupied = {};
@@ -235,11 +236,12 @@ function drawBoard(){
   for(let i=0;i<boardSize;i++){
     const pos = padding + i*cellSize;
     ctx.beginPath();
-    ctx.moveTo(padding,pos); ctx.lineTo(canvas.width-padding,pos); ctx.stroke();
+    ctx.moveTo(padding,pos); ctx.lineTo(boardPixels-padding,pos); ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(pos,padding); ctx.lineTo(pos,canvas.height-padding); ctx.stroke();
+    ctx.moveTo(pos,padding); ctx.lineTo(pos,boardPixels-padding); ctx.stroke();
   }
   const stars = [3,9,15];
+  ctx.fillStyle = '#000';
   stars.forEach(x=>{
     stars.forEach(y=>{
       ctx.beginPath();
