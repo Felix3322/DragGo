@@ -1,6 +1,6 @@
 // Copyright 2025 Felix Liu
 // Released under the GPLv3
-const boardSize = 19;
+let boardSize = 19;
 const langSelect = document.getElementById('langSelect');
 let lang = localStorage.getItem('lang') || langSelect.value;
 langSelect.value = lang;
@@ -18,12 +18,14 @@ const texts = {
       <li>On your turn, place one stone next to either head or tail of your snake.</li>
       <li>After every five moves, you may move diagonally once on your next turn; if unused that turn, the chance is lost.</li>
       <li>An end is <em>blocked</em> when the intersection directly forward is off the board or occupied.</li>
-      <li>The head cannot be extended when blocked unless you cut it off. Each player may cut once per game on either end.</li>
+      <li>The head cannot be extended when blocked unless you cut it off. Each player may cut once per game (twice in Long Mode) on either end.</li>
       <li>The tail may optionally be cut from the middle when blocked, removing the blocked half.</li>
       <li>A red box marks each player's last stone.</li>
       <li>If both ends are blocked, that player loses.</li>
+      <li>Long Mode uses a larger board with random obstacles.</li>
     </ol>`,
     ai: 'AI Opponent',
+    longMode: 'Long Mode',
     black: 'Black',
     white: 'White',
     move: ' to move',
@@ -64,12 +66,14 @@ const texts = {
       <li>每回合在自己蛇的头或尾相邻处落子。</li>
       <li>每下五子后，下一回合可斜走一步，若不使用则失效。</li>
       <li>若某端继续前进遇到棋盘外或棋子，则视为被堵。</li>
-      <li>蛇头被堵后除非截断，否则不能再从该端下子；每位玩家有一次截断机会，可选择头或尾。</li>
+      <li>蛇头被堵后除非截断，否则不能再从该端下子；每位玩家每局可截断一次（长局模式下为两次），可选择头或尾。</li>
       <li>蛇尾被堵时可选择从中间截去被堵的一半。</li>
       <li>红框标记双方最后落子的位置。</li>
       <li>若一条蛇两端皆被堵，则其对手获胜。</li>
+      <li>长局模式会使用更大的棋盘，并随机加入障碍。</li>
     </ol>`,
     ai: '人机对战',
+    longMode: '长局模式',
     black: '黑',
     white: '白',
     move: '方行动',
@@ -115,6 +119,7 @@ function applyLang(){
   document.getElementById('hint').textContent = t('hint');
   document.getElementById('rules').innerHTML = t('rules');
   document.getElementById('aiLabel').textContent = t('ai');
+  document.getElementById('longLabel').textContent = t('longMode');
   demoCaptionEls[0].textContent = texts[lang].demoCaptions[0][0];
   demoCaptionEls[1].textContent = texts[lang].demoCaptions[1][0];
   if(messageEl.textContent)
@@ -130,9 +135,9 @@ langSelect.onchange = ()=>{
 };
 const cellSize = 30;
 const padding = cellSize;
-const boardPixels = padding * 2 + cellSize * (boardSize - 1);
+let boardPixels = padding * 2 + cellSize * (boardSize - 1);
 const canvas = document.getElementById('board');
-const ctx = setupCanvas(canvas, boardPixels, boardPixels);
+let ctx = setupCanvas(canvas, boardPixels, boardPixels);
 let current = 'black';
 const snakes = {black: [], white: []};
 const occupied = {};
@@ -153,9 +158,11 @@ const statsWhite = document.getElementById('statsWhite');
 const moveCount = {black:0, white:0};
 const diagonalChance = {black:false, white:false};
 const lastMove = {black:null, white:null};
-const cutAvailable = {black:true, white:true};
+const cutAvailable = {black:1, white:1};
 let availableMoves = [];
 let vsAI = false;
+let longMode = false;
+const obstacles = [];
 
 function setupCanvas(c,w,h){
   const dpr = window.devicePixelRatio || 1;
@@ -168,22 +175,42 @@ function setupCanvas(c,w,h){
   return context;
 }
 
+function resizeBoard(){
+  boardPixels = padding * 2 + cellSize * (boardSize - 1);
+  ctx = setupCanvas(canvas, boardPixels, boardPixels);
+}
+
+function placeObstacles(count){
+  obstacles.length = 0;
+  const stars = [3, Math.floor(boardSize/2), boardSize-4];
+  for(let i=0;i<count;i++){
+    let x, y, key;
+    do{
+      x = Math.floor(Math.random()*boardSize);
+      y = Math.floor(Math.random()*boardSize);
+      key = posKey(x,y);
+    }while(occupied[key] || stars.includes(x) && stars.includes(y));
+    obstacles.push({x,y});
+    occupied[key] = 'block';
+  }
+}
+
 function updateStats(){
   statsBlack.innerHTML = `${t('black')}:<br>${t('length')}: ${snakes.black.length}`+
     `<br>${t('moves')}: ${moveCount.black}<br>${t('diagAvail')}: `+
     `${diagonalChance.black ? '✓' : '✗'}`+
-    `<br>${t('cutAvail')}: ${cutAvailable.black ? '✓' : '✗'}`;
+    `<br>${t('cutAvail')}: ${cutAvailable.black}`;
   statsWhite.innerHTML = `${t('white')}:<br>${t('length')}: ${snakes.white.length}`+
     `<br>${t('moves')}: ${moveCount.white}<br>${t('diagAvail')}: `+
     `${diagonalChance.white ? '✓' : '✗'}`+
-    `<br>${t('cutAvail')}: ${cutAvailable.white ? '✓' : '✗'}`;
+    `<br>${t('cutAvail')}: ${cutAvailable.white}`;
 }
 
 function updateAvailableMoves(){
   availableMoves = [];
   const mySnake = snakes[current];
   if(mySnake.length === 0){
-    const stars = [3,9,15];
+    const stars = [3, Math.floor(boardSize/2), boardSize-4];
     stars.forEach(x=>{
       stars.forEach(y=>{
         if(!occupied[posKey(x,y)]) availableMoves.push({x,y});
@@ -224,7 +251,7 @@ function drawBoard(){
     ctx.beginPath();
     ctx.moveTo(pos,padding); ctx.lineTo(pos,boardPixels-padding); ctx.stroke();
   }
-  const stars = [3,9,15];
+  const stars = [3, Math.floor(boardSize/2), boardSize-4];
   ctx.fillStyle = '#000';
   stars.forEach(x=>{
     stars.forEach(y=>{
@@ -232,6 +259,10 @@ function drawBoard(){
       ctx.arc(padding+x*cellSize,padding+y*cellSize,4,0,Math.PI*2);
       ctx.fill();
     });
+  });
+  ctx.fillStyle = '#888';
+  obstacles.forEach(o=>{
+    ctx.fillRect(padding+o.x*cellSize-12, padding+o.y*cellSize-12, 24, 24);
   });
   Object.entries(snakes).forEach(([color,list])=>{
     list.forEach(pt=>drawStone(pt.x,pt.y,color));
@@ -365,7 +396,7 @@ canvas.addEventListener('click', e=>{
 });
 
 function isStar(x,y){
-  const starCoords = [3,9,15];
+  const starCoords = [3, Math.floor(boardSize/2), boardSize-4];
   return starCoords.includes(x) && starCoords.includes(y);
 }
 
@@ -426,12 +457,12 @@ function blockedForward(snake,index){
 
 function updateCutButtons(){
   const mySnake=snakes[current];
-  if(mySnake.length>=2 && blockedForward(mySnake,0) && cutAvailable[current]){
+  if(mySnake.length>=2 && blockedForward(mySnake,0) && cutAvailable[current]>0){
     cutHeadBtn.classList.remove('hidden');
   }else{
     cutHeadBtn.classList.add('hidden');
   }
-  if(mySnake.length>=2 && blockedForward(mySnake,mySnake.length-1) && cutAvailable[current]){
+  if(mySnake.length>=2 && blockedForward(mySnake,mySnake.length-1) && cutAvailable[current]>0){
     cutTailBtn.classList.remove('hidden');
   }else{
     cutTailBtn.classList.add('hidden');
@@ -442,7 +473,7 @@ cutHeadBtn.onclick=()=>{ cutEnd(true); };
 cutTailBtn.onclick=()=>{ cutEnd(false); };
 
 function cutEnd(head){
-  if(!cutAvailable[current]) return;
+  if(cutAvailable[current]<=0) return;
   const mySnake=snakes[current];
   if(mySnake.length===0) return;
   if(head){
@@ -455,7 +486,7 @@ function cutEnd(head){
       delete occupied[posKey(p.x,p.y)];
     }
   }
-  cutAvailable[current]=false;
+  cutAvailable[current]--;
   drawBoard();
   updateCutButtons();
 }
@@ -491,6 +522,23 @@ document.getElementById('restart').onclick = ()=>location.reload();
 
 document.getElementById('startGame').onclick = ()=>{
   vsAI = document.getElementById('aiToggle').checked;
+  longMode = document.getElementById('longToggle').checked;
+  boardSize = longMode ? 27 : 19;
+  cutAvailable.black = longMode ? 2 : 1;
+  cutAvailable.white = longMode ? 2 : 1;
+  ['black','white'].forEach(c=>{
+    snakes[c] = [];
+    moveCount[c] = 0;
+    diagonalChance[c] = false;
+    lastMove[c] = null;
+  });
+  for(const k in occupied) delete occupied[k];
+  if(longMode){
+    placeObstacles(10);
+  }else{
+    obstacles.length = 0;
+  }
+  resizeBoard();
   document.getElementById('instructions').classList.add('hidden');
   drawBoard();
   messageEl.textContent = t('black') + t('move') +
