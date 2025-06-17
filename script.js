@@ -24,7 +24,8 @@ const texts = {
       <li>If both ends are blocked, that player loses.</li>
       <li>Long Mode uses a larger board with random obstacles.</li>
     </ol>`,
-    ai: 'AI Opponent',
+    aiBlack: 'AI Black',
+    aiWhite: 'AI White',
     longMode: 'Long Mode',
     black: 'Black',
     white: 'White',
@@ -72,7 +73,8 @@ const texts = {
       <li>若一条蛇两端皆被堵，则其对手获胜。</li>
       <li>长局模式会使用更大的棋盘，并随机加入障碍。</li>
     </ol>`,
-    ai: '人机对战',
+    aiBlack: '黑方电脑',
+    aiWhite: '白方电脑',
     longMode: '长局模式',
     black: '黑',
     white: '白',
@@ -118,7 +120,8 @@ function applyLang(){
   document.getElementById('startGame').textContent = t('start');
   document.getElementById('hint').textContent = t('hint');
   document.getElementById('rules').innerHTML = t('rules');
-  document.getElementById('aiLabel').textContent = t('ai');
+  document.getElementById('aiBlackLabel').textContent = t('aiBlack');
+  document.getElementById('aiWhiteLabel').textContent = t('aiWhite');
   document.getElementById('longLabel').textContent = t('longMode');
   demoCaptionEls[0].textContent = texts[lang].demoCaptions[0][0];
   demoCaptionEls[1].textContent = texts[lang].demoCaptions[1][0];
@@ -160,9 +163,11 @@ const diagonalChance = {black:false, white:false};
 const lastMove = {black:null, white:null};
 const cutAvailable = {black:1, white:1};
 let availableMoves = [];
-let vsAI = false;
+let aiBlack = false;
+let aiWhite = false;
 let longMode = false;
 const obstacles = [];
+const items = [];
 
 function setupCanvas(c,w,h){
   const dpr = window.devicePixelRatio || 1;
@@ -180,9 +185,18 @@ function resizeBoard(){
   ctx = setupCanvas(canvas, boardPixels, boardPixels);
 }
 
+function getStarCoords(){
+  if(longMode){
+    const coords=[];
+    for(let i=3;i<boardSize;i+=6) coords.push(i);
+    return coords;
+  }
+  return [3, Math.floor(boardSize/2), boardSize-4];
+}
+
 function placeObstacles(count){
   obstacles.length = 0;
-  const stars = [3, Math.floor(boardSize/2), boardSize-4];
+  const stars = getStarCoords();
   for(let i=0;i<count;i++){
     let x, y, key;
     do{
@@ -192,6 +206,20 @@ function placeObstacles(count){
     }while(occupied[key] || stars.includes(x) && stars.includes(y));
     obstacles.push({x,y});
     occupied[key] = 'block';
+  }
+}
+
+function placeItems(count){
+  items.length = 0;
+  for(let i=0;i<count;i++){
+    let x,y,key;
+    do{
+      x=Math.floor(Math.random()*boardSize);
+      y=Math.floor(Math.random()*boardSize);
+      key=posKey(x,y);
+    }while(occupied[key]);
+    const type=Math.random()<0.5?'cut':'diag';
+    items.push({x,y,type});
   }
 }
 
@@ -210,7 +238,7 @@ function updateAvailableMoves(){
   availableMoves = [];
   const mySnake = snakes[current];
   if(mySnake.length === 0){
-    const stars = [3, Math.floor(boardSize/2), boardSize-4];
+    const stars = getStarCoords();
     stars.forEach(x=>{
       stars.forEach(y=>{
         if(!occupied[posKey(x,y)]) availableMoves.push({x,y});
@@ -251,7 +279,7 @@ function drawBoard(){
     ctx.beginPath();
     ctx.moveTo(pos,padding); ctx.lineTo(pos,boardPixels-padding); ctx.stroke();
   }
-  const stars = [3, Math.floor(boardSize/2), boardSize-4];
+  const stars = getStarCoords();
   ctx.fillStyle = '#000';
   stars.forEach(x=>{
     stars.forEach(y=>{
@@ -263,6 +291,13 @@ function drawBoard(){
   ctx.fillStyle = '#888';
   obstacles.forEach(o=>{
     ctx.fillRect(padding+o.x*cellSize-12, padding+o.y*cellSize-12, 24, 24);
+  });
+  const itemColors={cut:'#0f0',diag:'#00f'};
+  items.forEach(it=>{
+    ctx.fillStyle=itemColors[it.type]||'#0f0';
+    ctx.beginPath();
+    ctx.arc(padding+it.x*cellSize,padding+it.y*cellSize,8,0,Math.PI*2);
+    ctx.fill();
   });
   Object.entries(snakes).forEach(([color,list])=>{
     list.forEach(pt=>drawStone(pt.x,pt.y,color));
@@ -326,23 +361,30 @@ function makeMove(x,y){
     occupied[key]=current;
     lastMove[current]={x,y};
   }
+  const itIndex=items.findIndex(it=>it.x===x&&it.y===y);
+  if(itIndex>=0){
+    const item=items.splice(itIndex,1)[0];
+    if(item.type==='cut') cutAvailable[current]++;
+    if(item.type==='diag') diagonalChance[current]=true;
+  }
   finishMove(diagUsed);
   switchPlayer();
   drawBoard();
   return true;
 }
 
-function aiMove(){
-  if(current!=='white') return;
+function aiMove(color){
+  if(current!==color) return;
   updateAvailableMoves();
   if(availableMoves.length===0) return;
-  const m = pickSmartMove();
+  const m = pickSmartMove(color);
   makeMove(m.x, m.y);
 }
 
-function pickSmartMove(){
+function pickSmartMove(color){
   const targets = [];
-  const oppSnake = snakes.black;
+  const oppColor = color==='black'?'white':'black';
+  const oppSnake = snakes[oppColor];
   if(oppSnake.length >= 2){
     const hd = forwardDir(oppSnake,0);
     if(hd){
@@ -396,7 +438,7 @@ canvas.addEventListener('click', e=>{
 });
 
 function isStar(x,y){
-  const starCoords = [3, Math.floor(boardSize/2), boardSize-4];
+  const starCoords = getStarCoords();
   return starCoords.includes(x) && starCoords.includes(y);
 }
 
@@ -429,6 +471,7 @@ function finishMove(diagonalUsed){
       moveCount[current]=0;
     }
   }
+  runLottery();
 }
 
 function forwardDir(snake,index){
@@ -491,13 +534,24 @@ function cutEnd(head){
   updateCutButtons();
 }
 
+function runLottery(){
+  if(Math.random()<0.15){
+    if(Math.random()<0.5){
+      cutAvailable[current]++;
+    }else{
+      diagonalChance[current]=true;
+    }
+  }
+}
+
 function switchPlayer(refreshOnly=false){
   if(!refreshOnly && checkWin()) return;
   if(!refreshOnly) current = current==='black'?'white':'black';
   messageEl.textContent = t(current) + t('move') +
     (diagonalChance[current]?t('diag'):'');
   updateCutButtons();
-  if(vsAI && current==='white') setTimeout(aiMove, 300);
+  if((current==='white' && aiWhite) || (current==='black' && aiBlack))
+    setTimeout(()=>aiMove(current), 300);
 }
 
 
@@ -521,7 +575,8 @@ function checkWin(){
 document.getElementById('restart').onclick = ()=>location.reload();
 
 document.getElementById('startGame').onclick = ()=>{
-  vsAI = document.getElementById('aiToggle').checked;
+  aiBlack = document.getElementById('aiBlackToggle').checked;
+  aiWhite = document.getElementById('aiWhiteToggle').checked;
   longMode = document.getElementById('longToggle').checked;
   boardSize = longMode ? 27 : 19;
   cutAvailable.black = longMode ? 2 : 1;
@@ -535,8 +590,10 @@ document.getElementById('startGame').onclick = ()=>{
   for(const k in occupied) delete occupied[k];
   if(longMode){
     placeObstacles(10);
+    placeItems(5);
   }else{
     obstacles.length = 0;
+    items.length = 0;
   }
   resizeBoard();
   document.getElementById('instructions').classList.add('hidden');
