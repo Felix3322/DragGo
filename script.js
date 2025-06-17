@@ -39,7 +39,6 @@ const texts = {
     moves: 'Moves',
     diagAvail: 'Diagonal',
     cutAvail: 'Cut',
-    replay: 'Replay Demo',
     demoCaptions: [
       [
         'Black starts at a star point.',
@@ -92,7 +91,6 @@ const texts = {
     moves: '计数',
     diagAvail: '斜走',
     cutAvail: '截断',
-    replay: '重播教学',
     demoCaptions: [
       [
         '黑方从星位开始。',
@@ -126,7 +124,6 @@ function applyLang(){
   cutHeadBtn.textContent = t('cutHead');
   cutTailBtn.textContent = t('cutTail');
   document.getElementById('startGame').textContent = t('start');
-  document.getElementById('replayDemo').textContent = t('replay');
   document.getElementById('hint').textContent = t('hint');
   document.getElementById('rules').innerHTML = t('rules');
   document.getElementById('onlineTitle').textContent = t('onlineTitle');
@@ -158,7 +155,6 @@ const occupied = {};
 const messageEl = document.getElementById('message');
 const cutHeadBtn = document.getElementById('cutHead');
 const cutTailBtn = document.getElementById('cutTail');
-const replayBtn = document.getElementById('replayDemo');
 const demoBoards = [
   document.getElementById('demo1'),
   document.getElementById('demo2')
@@ -535,7 +531,6 @@ function cycleDemos(){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{applyLang(); cycleDemos();});
-replayBtn.onclick = cycleDemos;
 document.getElementById('onlineBtn').onclick = ()=>{
   document.getElementById('online').classList.remove('hidden');
 };

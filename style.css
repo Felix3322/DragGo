@@ -5,7 +5,12 @@ body { font-family: sans-serif; text-align: center; position: relative; }
 #controls { margin-top: 10px; }
 button { margin: 0 5px; }
 .overlay { position: fixed; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.8); color:#fff; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:left; padding:20px; }
-#langSwitch { position:absolute; top:5px; right:5px; }
+#langSwitch {
+  position: fixed;
+  top: 5px;
+  right: 5px;
+  z-index: 1000;
+}
 .hidden { display:none; }
 .demoFrame { margin:20px 0; }
 .demoBoard { background:#f5d6a0; border:1px solid #333; display:block; margin:0 auto; }
