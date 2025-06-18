@@ -1,6 +1,6 @@
 // Copyright 2025 Felix Liu
 // Released under the GPLv3
-let boardSize = 19;
+const boardSize = 19;
 const langSelect = document.getElementById('langSelect');
 let lang = localStorage.getItem('lang') || langSelect.value;
 langSelect.value = lang;
@@ -13,7 +13,7 @@ const texts = {
     cutTail: 'Cut Tail',
     start: 'Start',
     hint: 'Valid moves for the current player are highlighted with green dots.',
-    rulesNormal: `<ol>
+    rules: `<ol>
       <li>Each player starts from any <strong>star point</strong>.</li>
       <li>On your turn, place one stone next to either head or tail of your snake.</li>
       <li>After every five moves, you may move diagonally once on your next turn; if unused that turn, the chance is lost.</li>
@@ -23,21 +23,7 @@ const texts = {
       <li>A red box marks each player's last stone.</li>
       <li>If both ends are blocked, that player loses.</li>
     </ol>`,
-    rulesLong: `<ol>
-      <li>Each player starts from any <strong>star point</strong>.</li>
-      <li>On your turn, place one stone next to either head or tail of your snake.</li>
-      <li>After every five moves, you may move diagonally once on your next turn; if unused that turn, the chance is lost.</li>
-      <li>An end is <em>blocked</em> when the intersection directly forward is off the board or occupied.</li>
-      <li>The head cannot be extended when blocked unless you cut it off. Each player may cut twice per game on either end.</li>
-      <li>The tail may optionally be cut from the middle when blocked, removing the blocked half.</li>
-      <li>A red box marks each player's last stone.</li>
-      <li>If both ends are blocked, that player loses.</li>
-      <li>The board is larger with random obstacles.</li>
-    </ol>`,
-    aiBlack: 'AI Black',
-    aiWhite: 'AI White',
-    longMode: 'Long Mode',
-    normalMode: 'Normal Mode',
+    ai: 'AI Opponent',
     black: 'Black',
     white: 'White',
     move: ' to move',
@@ -73,31 +59,17 @@ const texts = {
     cutTail: '截断尾部',
     start: '开始',
     hint: '当前可下位置以绿色点标示。',
-    rulesNormal: `<ol>
+    rules: `<ol>
       <li>双方从任意<strong>星位</strong>开始。</li>
       <li>每回合在自己蛇的头或尾相邻处落子。</li>
       <li>每下五子后，下一回合可斜走一步，若不使用则失效。</li>
       <li>若某端继续前进遇到棋盘外或棋子，则视为被堵。</li>
-      <li>蛇头被堵后除非截断，否则不能再从该端下子；每位玩家每局可截断一次，可选择头或尾。</li>
+      <li>蛇头被堵后除非截断，否则不能再从该端下子；每位玩家有一次截断机会，可选择头或尾。</li>
       <li>蛇尾被堵时可选择从中间截去被堵的一半。</li>
       <li>红框标记双方最后落子的位置。</li>
       <li>若一条蛇两端皆被堵，则其对手获胜。</li>
     </ol>`,
-    rulesLong: `<ol>
-      <li>双方从任意<strong>星位</strong>开始。</li>
-      <li>每回合在自己蛇的头或尾相邻处落子。</li>
-      <li>每下五子后，下一回合可斜走一步，若不使用则失效。</li>
-      <li>若某端继续前进遇到棋盘外或棋子，则视为被堵。</li>
-      <li>蛇头被堵后除非截断，否则不能再从该端下子；每位玩家每局可截断两次，可选择头或尾。</li>
-      <li>蛇尾被堵时可选择从中间截去被堵的一半。</li>
-      <li>红框标记双方最后落子的位置。</li>
-      <li>若一条蛇两端皆被堵，则其对手获胜。</li>
-      <li>棋盘更大并随机加入障碍。</li>
-    </ol>`,
-    aiBlack: '黑方电脑',
-    aiWhite: '白方电脑',
-    longMode: '长局模式',
-    normalMode: '普通模式',
+    ai: '人机对战',
     black: '黑',
     white: '白',
     move: '方行动',
@@ -132,11 +104,6 @@ function t(key){
   return texts[lang][key];
 }
 
-function updateRules(){
-  const rulesEl = document.getElementById('rules');
-  rulesEl.innerHTML = longToggle.checked ? t('rulesLong') : t('rulesNormal');
-}
-
 function applyLang(){
   document.documentElement.lang = lang;
   document.getElementById('title').textContent = t('title');
@@ -146,10 +113,8 @@ function applyLang(){
   cutTailBtn.textContent = t('cutTail');
   document.getElementById('startGame').textContent = t('start');
   document.getElementById('hint').textContent = t('hint');
-  updateRules();
-  document.getElementById('aiBlackLabel').textContent = t('aiBlack');
-  document.getElementById('aiWhiteLabel').textContent = t('aiWhite');
-  document.getElementById('longLabel').textContent = t('longMode');
+  document.getElementById('rules').innerHTML = t('rules');
+  document.getElementById('aiLabel').textContent = t('ai');
   demoCaptionEls[0].textContent = texts[lang].demoCaptions[0][0];
   demoCaptionEls[1].textContent = texts[lang].demoCaptions[1][0];
   if(messageEl.textContent)
@@ -165,18 +130,15 @@ langSelect.onchange = ()=>{
 };
 const cellSize = 30;
 const padding = cellSize;
-let boardPixels = padding * 2 + cellSize * (boardSize - 1);
+const boardPixels = padding * 2 + cellSize * (boardSize - 1);
 const canvas = document.getElementById('board');
-let ctx = setupCanvas(canvas, boardPixels, boardPixels);
+const ctx = setupCanvas(canvas, boardPixels, boardPixels);
 let current = 'black';
 const snakes = {black: [], white: []};
 const occupied = {};
 const messageEl = document.getElementById('message');
 const cutHeadBtn = document.getElementById('cutHead');
 const cutTailBtn = document.getElementById('cutTail');
-const aiBlackToggle = document.getElementById('aiBlackToggle');
-const aiWhiteToggle = document.getElementById('aiWhiteToggle');
-const longToggle = document.getElementById('longToggle');
 const demoBoards = [
   document.getElementById('demo1'),
   document.getElementById('demo2')
@@ -191,25 +153,9 @@ const statsWhite = document.getElementById('statsWhite');
 const moveCount = {black:0, white:0};
 const diagonalChance = {black:false, white:false};
 const lastMove = {black:null, white:null};
-const cutAvailable = {black:1, white:1};
+const cutAvailable = {black:true, white:true};
 let availableMoves = [];
-let aiBlack = false;
-let aiWhite = false;
-let longMode = false;
-const obstacles = [];
-const items = [];
-
-function updateAiToggles(){
-  if(!longToggle.checked){
-    if(aiBlackToggle.checked && aiWhiteToggle.checked){
-      aiWhiteToggle.checked = false;
-    }
-  }
-}
-
-aiBlackToggle.onchange = updateAiToggles;
-aiWhiteToggle.onchange = updateAiToggles;
-longToggle.onchange = ()=>{ updateRules(); updateAiToggles(); };
+let vsAI = false;
 
 function setupCanvas(c,w,h){
   const dpr = window.devicePixelRatio || 1;
@@ -222,65 +168,22 @@ function setupCanvas(c,w,h){
   return context;
 }
 
-function resizeBoard(){
-  boardPixels = padding * 2 + cellSize * (boardSize - 1);
-  ctx = setupCanvas(canvas, boardPixels, boardPixels);
-}
-
-function getStarCoords(){
-  if(longMode){
-    const coords=[];
-    for(let i=3;i<boardSize;i+=6) coords.push(i);
-    return coords;
-  }
-  return [3, Math.floor(boardSize/2), boardSize-4];
-}
-
-function placeObstacles(count){
-  obstacles.length = 0;
-  const stars = getStarCoords();
-  for(let i=0;i<count;i++){
-    let x, y, key;
-    do{
-      x = Math.floor(Math.random()*boardSize);
-      y = Math.floor(Math.random()*boardSize);
-      key = posKey(x,y);
-    }while(occupied[key] || stars.includes(x) && stars.includes(y));
-    obstacles.push({x,y});
-    occupied[key] = 'block';
-  }
-}
-
-function placeItems(count){
-  items.length = 0;
-  for(let i=0;i<count;i++){
-    let x,y,key;
-    do{
-      x=Math.floor(Math.random()*boardSize);
-      y=Math.floor(Math.random()*boardSize);
-      key=posKey(x,y);
-    }while(occupied[key]);
-    const type=Math.random()<0.5?'cut':'diag';
-    items.push({x,y,type});
-  }
-}
-
 function updateStats(){
   statsBlack.innerHTML = `${t('black')}:<br>${t('length')}: ${snakes.black.length}`+
     `<br>${t('moves')}: ${moveCount.black}<br>${t('diagAvail')}: `+
     `${diagonalChance.black ? '✓' : '✗'}`+
-    `<br>${t('cutAvail')}: ${cutAvailable.black}`;
+    `<br>${t('cutAvail')}: ${cutAvailable.black ? '✓' : '✗'}`;
   statsWhite.innerHTML = `${t('white')}:<br>${t('length')}: ${snakes.white.length}`+
     `<br>${t('moves')}: ${moveCount.white}<br>${t('diagAvail')}: `+
     `${diagonalChance.white ? '✓' : '✗'}`+
-    `<br>${t('cutAvail')}: ${cutAvailable.white}`;
+    `<br>${t('cutAvail')}: ${cutAvailable.white ? '✓' : '✗'}`;
 }
 
 function updateAvailableMoves(){
   availableMoves = [];
   const mySnake = snakes[current];
   if(mySnake.length === 0){
-    const stars = getStarCoords();
+    const stars = [3,9,15];
     stars.forEach(x=>{
       stars.forEach(y=>{
         if(!occupied[posKey(x,y)]) availableMoves.push({x,y});
@@ -321,7 +224,7 @@ function drawBoard(){
     ctx.beginPath();
     ctx.moveTo(pos,padding); ctx.lineTo(pos,boardPixels-padding); ctx.stroke();
   }
-  const stars = getStarCoords();
+  const stars = [3,9,15];
   ctx.fillStyle = '#000';
   stars.forEach(x=>{
     stars.forEach(y=>{
@@ -329,17 +232,6 @@ function drawBoard(){
       ctx.arc(padding+x*cellSize,padding+y*cellSize,4,0,Math.PI*2);
       ctx.fill();
     });
-  });
-  ctx.fillStyle = '#888';
-  obstacles.forEach(o=>{
-    ctx.fillRect(padding+o.x*cellSize-12, padding+o.y*cellSize-12, 24, 24);
-  });
-  const itemColors={cut:'#0f0',diag:'#00f'};
-  items.forEach(it=>{
-    ctx.fillStyle=itemColors[it.type]||'#0f0';
-    ctx.beginPath();
-    ctx.arc(padding+it.x*cellSize,padding+it.y*cellSize,8,0,Math.PI*2);
-    ctx.fill();
   });
   Object.entries(snakes).forEach(([color,list])=>{
     list.forEach(pt=>drawStone(pt.x,pt.y,color));
@@ -403,30 +295,23 @@ function makeMove(x,y){
     occupied[key]=current;
     lastMove[current]={x,y};
   }
-  const itIndex=items.findIndex(it=>it.x===x&&it.y===y);
-  if(itIndex>=0){
-    const item=items.splice(itIndex,1)[0];
-    if(item.type==='cut') cutAvailable[current]++;
-    if(item.type==='diag') diagonalChance[current]=true;
-  }
   finishMove(diagUsed);
   switchPlayer();
   drawBoard();
   return true;
 }
 
-function aiMove(color){
-  if(current!==color) return;
+function aiMove(){
+  if(current!=='white') return;
   updateAvailableMoves();
   if(availableMoves.length===0) return;
-  const m = pickSmartMove(color);
+  const m = pickSmartMove();
   makeMove(m.x, m.y);
 }
 
-function pickSmartMove(color){
+function pickSmartMove(){
   const targets = [];
-  const oppColor = color==='black'?'white':'black';
-  const oppSnake = snakes[oppColor];
+  const oppSnake = snakes.black;
   if(oppSnake.length >= 2){
     const hd = forwardDir(oppSnake,0);
     if(hd){
@@ -480,7 +365,7 @@ canvas.addEventListener('click', e=>{
 });
 
 function isStar(x,y){
-  const starCoords = getStarCoords();
+  const starCoords = [3,9,15];
   return starCoords.includes(x) && starCoords.includes(y);
 }
 
@@ -513,7 +398,6 @@ function finishMove(diagonalUsed){
       moveCount[current]=0;
     }
   }
-  runLottery();
 }
 
 function forwardDir(snake,index){
@@ -542,12 +426,12 @@ function blockedForward(snake,index){
 
 function updateCutButtons(){
   const mySnake=snakes[current];
-  if(mySnake.length>=2 && blockedForward(mySnake,0) && cutAvailable[current]>0){
+  if(mySnake.length>=2 && blockedForward(mySnake,0) && cutAvailable[current]){
     cutHeadBtn.classList.remove('hidden');
   }else{
     cutHeadBtn.classList.add('hidden');
   }
-  if(mySnake.length>=2 && blockedForward(mySnake,mySnake.length-1) && cutAvailable[current]>0){
+  if(mySnake.length>=2 && blockedForward(mySnake,mySnake.length-1) && cutAvailable[current]){
     cutTailBtn.classList.remove('hidden');
   }else{
     cutTailBtn.classList.add('hidden');
@@ -558,7 +442,7 @@ cutHeadBtn.onclick=()=>{ cutEnd(true); };
 cutTailBtn.onclick=()=>{ cutEnd(false); };
 
 function cutEnd(head){
-  if(cutAvailable[current]<=0) return;
+  if(!cutAvailable[current]) return;
   const mySnake=snakes[current];
   if(mySnake.length===0) return;
   if(head){
@@ -571,19 +455,9 @@ function cutEnd(head){
       delete occupied[posKey(p.x,p.y)];
     }
   }
-  cutAvailable[current]--;
+  cutAvailable[current]=false;
   drawBoard();
   updateCutButtons();
-}
-
-function runLottery(){
-  if(Math.random()<0.15){
-    if(Math.random()<0.5){
-      cutAvailable[current]++;
-    }else{
-      diagonalChance[current]=true;
-    }
-  }
 }
 
 function switchPlayer(refreshOnly=false){
@@ -592,8 +466,7 @@ function switchPlayer(refreshOnly=false){
   messageEl.textContent = t(current) + t('move') +
     (diagonalChance[current]?t('diag'):'');
   updateCutButtons();
-  if((current==='white' && aiWhite) || (current==='black' && aiBlack))
-    setTimeout(()=>aiMove(current), 300);
+  if(vsAI && current==='white') setTimeout(aiMove, 300);
 }
 
 
@@ -617,27 +490,7 @@ function checkWin(){
 document.getElementById('restart').onclick = ()=>location.reload();
 
 document.getElementById('startGame').onclick = ()=>{
-  aiBlack = aiBlackToggle.checked;
-  aiWhite = aiWhiteToggle.checked;
-  longMode = longToggle.checked;
-  boardSize = longMode ? 27 : 19;
-  cutAvailable.black = longMode ? 2 : 1;
-  cutAvailable.white = longMode ? 2 : 1;
-  ['black','white'].forEach(c=>{
-    snakes[c] = [];
-    moveCount[c] = 0;
-    diagonalChance[c] = false;
-    lastMove[c] = null;
-  });
-  for(const k in occupied) delete occupied[k];
-  if(longMode){
-    placeObstacles(10);
-    placeItems(5);
-  }else{
-    obstacles.length = 0;
-    items.length = 0;
-  }
-  resizeBoard();
+  vsAI = document.getElementById('aiToggle').checked;
   document.getElementById('instructions').classList.add('hidden');
   drawBoard();
   messageEl.textContent = t('black') + t('move') +
@@ -738,9 +591,4 @@ function cycleDemos(){
   });
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{
-  applyLang();
-  updateRules();
-  updateAiToggles();
-  cycleDemos();
-});
+document.addEventListener('DOMContentLoaded', ()=>{applyLang(); cycleDemos();});
