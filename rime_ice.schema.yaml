@@ -577,56 +577,132 @@ speller:
     - derive/^lve$/lüe/    # lve → lüe
     - derive/^nve$/nue/    # nve → nue（有些人键盘上不打 ü）
     - derive/^lve$/lue/    # lve → lue
+    
+    # ===== 0) 标准归并（必须保留在前）=====
+    - derive/^iou$/iu/
+    - derive/^uei$/ui/
+    - derive/^uen$/un/
+    - derive/^([nl])ue$/$1ve/          # nue/lue → nve/lve（ü= v；只限 n/l）
+    - derive/^([jqx])v/$1u/            # j/q/x + v 一律归一到 u（jve→jue, jvn→jun ... 统配安全）
 
-    ########## 相邻键误触修正（细化）
+    # ==========================================================
+    # =============== A) 100% 非法 → 合法（安全白名单）==========
+    # ==========================================================
 
-    # --- 声母区 ---
-    # s → d/f, 常见误触，限定只在 de/di/du/fa... 合法拼音里
-    - derive/^sei$/dei/
-    - derive/^sen$/den/
-    - derive/^seng$/deng/
-    - derive/^si$/di/      # si 键盘滑到 d → di
-    - derive/^su$/du/
-
-    # d → s/f/g，限定只在 fei/fen/feng 等
-    - derive/^den$/fen/
-    - derive/^deng$/feng/
-    - derive/^dei$/fei/
-    - derive/^dig$/sig/    # 键盘误触 g → sig（修正为 si? 看需求）
-
-    # h ↔ j，相邻误触
+    # A1. h↔j 相邻误触（左值在拼音表中不存在）
+    - derive/^hi$/ji/
     - derive/^hia$/jia/
+    - derive/^hie$/jie/
     - derive/^hin$/jin/
     - derive/^hing$/jing/
+    - derive/^hiu$/jiu/
+    - derive/^hian$/jian/
+    - derive/^hiao$/jiao/
+    - derive/^hiong$/jiong/
     - derive/^je$/he/
     - derive/^jen$/hen/
     - derive/^jeng$/heng/
 
-    # n ↔ b/m，相邻误触
-    - derive/^bo$/no/
-    - derive/^bu$/nu/
-    - derive/^mo$/no/    # mo 键盘滑 → no
-    - derive/^nu$/mu/    # nu 键盘滑 → mu
+    # A2. xuo（不存在）→ cuo（存在）
+    - derive/^xuo$/cuo/
 
-    # l ↔ o，常见误触
-    - derive/^lo$/luo/   # lo 打成 luo
-    - derive/^lu$/lo/    # lu → lo（轻量，允许）
+    # A3. j/q/x + ion 漏 g → *iong
+    - derive/^xion$/xiong/
+    - derive/^jion$/jiong/
+    - derive/^qion$/qiong/
 
-    # --- 韵母区 ---
-    # i ↔ u ↔ o 键盘纵向误触
-    - derive/^un$/in/   # un → in
-    - derive/^ung$/ing/
-    - derive/^in$/un/   # 反向（可选）
-    - derive/^ing$/ung/ # 反向（可选）
-    - derive/^on$/en/   # on → en
-    - derive/^en$/on/   # 反向
+    # A4. y- 系竖排误触/历史残留
+    - derive/^yon$/yong/
+    - derive/^yung$/yong/
+    - derive/^yai$/yao/
+    - derive/^yion$/yong/
+    - derive/^yiong$/yong/
 
-    # o ↔ p，相邻
-    - derive/^po$/bo/
-    - derive/^op$/ou/   # 错打 op → ou
+    # A5. “*iap” 末键 p（邻 o）→ “*iao”  （仅列能接 -iao 的声母）
+    - derive/^biap$/biao/
+    - derive/^piap$/piao/
+    - derive/^miap$/miao/
+    - derive/^diap$/diao/
+    - derive/^tiap$/tiao/
+    - derive/^niap$/niao/
+    - derive/^liap$/liao/
+    - derive/^jiap$/jiao/
+    - derive/^qiap$/qiao/
+    - derive/^xiap$/xiao/
 
-    # 常见韵母错拼
-    - derive/^iou$/iu/   # iou → iu
-    - derive/^uei$/ui/   # uei → ui
-    - derive/^uen$/un/   # uen → un
+    # A6. “…ung”（非法）→ “…ing”（仅列有 -ing 的声母）
+    - derive/^bung$/bing/
+    - derive/^pung$/ping/
+    - derive/^mung$/ming/
+    - derive/^dung$/ding/
+    - derive/^tung$/ting/
+    - derive/^nung$/ning/
+    - derive/^lung$/ling/
+    - derive/^jung$/jing/
+    - derive/^qung$/qing/
+    - derive/^xung$/xing/
 
+    # A7. “…on”（非法）→ “…en”（严格枚举能接 -en 的声母）
+    - derive/^bon$/ben/
+    - derive/^pon$/pen/
+    - derive/^mon$/men/
+    - derive/^fon$/fen/
+    - derive/^gon$/gen/
+    - derive/^kon$/ken/
+    - derive/^hon$/hen/
+    - derive/^zhon$/zhen/
+    - derive/^chon$/chen/
+    - derive/^shon$/shen/
+    - derive/^ron$/ren/
+    - derive/^zon$/zen/
+    - derive/^con$/cen/
+    - derive/^son$/sen/
+    - derive/^non$/nen/
+
+    # A8. c/s→x 的固定救错（左值非法 → 右值合法）
+    - derive/^ciang$/xiang/
+    - derive/^siang$/xiang/
+    - derive/^ciong$/xiong/
+    - derive/^siong$/xiong/
+
+    # A9. 历史残留：lo → luo（现代标准不写 lo）
+    - derive/^lo$/luo/
+
+    # A10. “uu” 连击 → “ui”（仅列『存在 -ui』的声母；不含 j/q/x、b/p/m/n/l）
+    - derive/^huu$/hui/
+    - derive/^guu$/gui/
+    - derive/^kuu$/kui/
+    - derive/^ruu$/rui/
+    - derive/^zuu$/zui/
+    - derive/^cuu$/cui/
+    - derive/^suu$/sui/
+    - derive/^zhuu$/zhui/
+    - derive/^chuu$/chui/
+    - derive/^shuu$/shui/
+    - derive/^duu$/dui/
+    - derive/^tuu$/tui/
+
+    # A11. 声母相邻 + 多余 h 型（100% 非法）：
+    - derive/^dhi$/shi/          # 你点名的例子
+    # （其它类似串若要加，必须左值确实不存在，才安全）
+
+    # ==========================================================
+    # =============== B) 高频但可能歧义（激进，可选）============
+    # ==========================================================
+    # 说明：以下会“改写合法→合法”，可能影响简拼/本意，默认注释。
+    # 若你确认需要，请去掉行首的 “# ” 启用。
+
+    # B1. gui ↔ hui（g/h 邻位 + i/u 纵向）
+    # - derive/^gui$/hui/
+    # - derive/^hui$/gui/
+
+    # B2. 相邻声母滑键
+    # - derive/^si$/di/
+    # - derive/^su$/du/
+    # - derive/^po$/bo/
+    # - derive/^bo$/po/
+
+    # B3. 尾韵纵向/邻键
+    # - derive/^op$/ou/
+    # - derive/^on$/en/
+    # - derive/^ing$/ong/
